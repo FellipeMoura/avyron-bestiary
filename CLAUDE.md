@@ -4,7 +4,7 @@ Contexto essencial para trabalhar neste repositório. Leitura obrigatória antes
 
 ## O que é isto
 
-App web de catálogo/documentação de um jogo 3D de coleção de criaturas com tema paleontológico. **Este repositório NÃO é o jogo** — o jogo em Godot vive em um repositório irmão em `c:\code\avyron` e não deve ser tocado a partir daqui. A ponte entre os dois é `pnpm game:export`, que escreve um bundle JSON versionado lá.
+App web de catálogo/documentação de um jogo 3D de coleção de criaturas com tema paleontológico. **Este repositório NÃO é o jogo** — o jogo em Godot vive em um repositório irmão em `c:\code\fellipe\avyron` e não deve ser tocado a partir daqui. A ponte entre os dois é `pnpm game:export`, que escreve um bundle JSON versionado lá.
 
 O jogo chama-se **Avyron**: Godot, câmera isométrica ortográfica travada em 30°/45°, exploração em tempo real e **combate por turnos** (1v1 com troca livre, in-world, sem arena separada).
 
@@ -87,7 +87,7 @@ Estas quatro regras não têm exceção. Se algo parecer conflitar com elas, ela
 ## Regras de domínio (não estão no código)
 
 - **Elenco fechado em 3 classes:** Loricati (CLS-001, artrópodes), Theria (CLS-002, sinapsídeos), Draconis (CLS-003, sauropsídeos). Criatura que não cabe em nenhuma delas não entra no jogo. "Vertebrados Primitivos" e "Incertos" foram removidas.
-- **Classes NÃO influenciam combate** nem captura. Hard rule do Changelog 0.01. Nunca adicionar campo de dano/multiplicador em `creature_classes`.
+- **Classes não têm matriz de vantagem entre si.** Hard rule do Changelog 0.01 — nunca adicionar campo de dano/multiplicador em `creature_classes`; não existe ciclo tipo o elemental entre classes. Refinado pelo sistema de Relicário: um *equipamento* pode conceder bônus de captura ou buff de combate vinculado à classe, mas isso é propriedade do equipamento, não uma relação de força CLS×CLS. Ver `classes`, `captura`, `relicario`.
 - **Elementos SIM, em anel fechado:** Água → Fogo → Natureza → Terra → Gelo → Eletricidade → Água (seta = vence). Vantagem 2.0, desvantagem 0.5, resto 1.0 por omissão. Cada elemento vence exatamente um e perde para exatamente um — a simetria é o ponto, não um acidente.
 - **Criatura ↔ Despertar é 1-para-1.** Tabela `awakenings` tem `UNIQUE(creature_id)`. Ausência de linha = criatura sem despertar. Hoje a cobertura é 26/26.
 - **3 eras × 3 mapas × ~20 criaturas inéditas** — escopo total do jogo. Reaparições em mapas posteriores não contam para o limite.

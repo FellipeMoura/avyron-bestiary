@@ -18,6 +18,12 @@ export const ItemSchema = z
     code: z.string().openapi({ example: "ITM-001" }),
     name: z.string(),
     category: z.enum(ITEM_CATEGORIES),
+    /**
+     * Set iff `category = 'material'` — which class this drop belongs to
+     * (Loricati/Theria/Draconis). Raw id, resolved to a code by whoever
+     * reads it, same convention as `creatures.classId`.
+     */
+    classId: z.number().int().nullable(),
     effect: z.string().nullable(),
     acquisition: z.string().nullable(),
     notes: z.string().nullable(),
@@ -27,12 +33,15 @@ export const ItemSchema = z
   .openapi("Item");
 
 export const ITEM_FIELDS = [
-  "id", "code", "name", "category", "effect", "acquisition", "notes", "createdAt", "updatedAt",
+  "id", "code", "name", "category", "classId", "effect", "acquisition", "notes", "createdAt", "updatedAt",
 ] as const;
 
 export const ListItemsQuerySchema = paginationSchema.extend({
   fields: z.string().optional(),
   category: z.enum(ITEM_CATEGORIES).optional(),
+  classCode: z.string().optional().openapi({
+    description: "Filter by owning class code (ex: CLS-003) — only material items have one",
+  }),
 });
 export const CodeParamsSchema = z.object({ code: z.string().openapi({ example: "ITM-001" }) });
 
@@ -40,6 +49,13 @@ const coreSchema = z.object({
   code: z.string().min(3).max(16),
   name: z.string().min(1).max(128),
   category: z.enum(ITEM_CATEGORIES).optional().openapi({ example: "mineral" }),
+  /**
+   * Reference by class code — resolved server-side to classId. Required when
+   * `category` is (or becomes) `'material'`, forbidden otherwise: a material
+   * with no class can't answer "what does my active creature need", and a
+   * mineral/capture/heal item with one would just be a lie no one asked for.
+   */
+  classCode: z.string().nullish().openapi({ example: "CLS-003" }),
   effect: z.string().max(2000).nullish(),
   acquisition: z.string().max(500).nullish(),
   notes: z.string().max(2000).nullish(),

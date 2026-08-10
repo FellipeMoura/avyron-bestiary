@@ -17,6 +17,7 @@ export const itemsController = {
         offset: q.offset,
         fields: q.fields,
         category: q.category,
+        classCode: q.classCode,
       }),
     );
   }) satisfies RequestHandler,

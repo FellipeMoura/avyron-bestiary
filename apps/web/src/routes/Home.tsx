@@ -52,7 +52,7 @@ export function Home() {
           to="/items"
           code="ITM"
           title="Itens"
-          desc="Minério, resina e emplastro — com preço, efeito e peso de mineração."
+          desc="Minério, material e emplastro — com preço, efeito e peso de mineração."
         />
         <Card
           to="/documents"

@@ -50,7 +50,7 @@ const OUT_FILE = resolve(OUT_REPO, "data/bestiary.json");
  * typed, range-checked column. This function is the only place the two
  * shapes meet.
  */
-function shapeRules(row, progression) {
+function shapeRules(row, progression, relicRules) {
   return {
     /**
      * Subir de nível pede as duas coisas ao mesmo tempo: XP acumulado e
@@ -87,6 +87,25 @@ function shapeRules(row, progression) {
     },
     levels: { min: row.levelMin, max: row.levelMax },
     elementNeutralMultiplier: row.elementNeutralMultiplier,
+    /**
+     * Constantes globais do sistema de Relicário — floor/ceil da chance de
+     * captura, os três bônus/penalidade aditivos, e o portão de nível do
+     * próprio relicário (XP por captura + custo de material). Ver documento
+     * `relicario`; `combat_rules.captureMinChance/maxChance` acima é da
+     * fórmula antiga baseada em HP, hoje vestigial — o Relicário não lê.
+     */
+    relic: {
+      captureFloorPct: relicRules.captureFloorPct,
+      captureCeilPct: relicRules.captureCeilPct,
+      sameElementBonusPct: relicRules.sameElementBonusPct,
+      sameClassBonusPct: relicRules.sameClassBonusPct,
+      elementDisadvantagePenaltyPct: relicRules.elementDisadvantagePenaltyPct,
+      xpPerCapture: relicRules.xpPerCapture,
+      xpCurveBase: relicRules.xpCurveBase,
+      xpCurveExponent: relicRules.xpCurveExponent,
+      materialCostBase: relicRules.materialCostBase,
+      materialCostLevelStep: relicRules.materialCostLevelStep,
+    },
   };
 }
 
@@ -128,6 +147,9 @@ const [
   miningRates,
   drops,
   progressionRules,
+  relics,
+  relicStats,
+  relicRules,
 ] = await Promise.all([
   get(`/elements?${LIMIT}`),
   get(`/elemental-advantages?${LIMIT}`),
@@ -151,6 +173,9 @@ const [
   get(`/mining-rates?${LIMIT}`),
   get(`/drops?${LIMIT}`),
   get(`/progression-rules`),
+  get(`/relics?${LIMIT}`),
+  get(`/relic-stats?${LIMIT}`),
+  get(`/relic-rules`),
 ]);
 
 // ---------------------------------------------------------------------------
@@ -215,6 +240,8 @@ for (const drop of drops) {
   dropsByCreature.set(drop.creatureId, list);
 }
 
+const relicStatByRelic = new Map(relicStats.map((s) => [s.relicId, s]));
+
 // ---------------------------------------------------------------------------
 // shaping + validation
 // ---------------------------------------------------------------------------
@@ -252,11 +279,38 @@ const outItems = allItems.map((i) => {
     code: i.code,
     name: i.name,
     category: i.category,
+    // Null for everything except `material` — the class that this drop
+    // belongs to (Loricati/Theria/Draconis). Lets the game ask "what does my
+    // active creature's class need" directly, instead of scanning drops.
+    classCode: code(classById, i.classId),
     effect: i.effect,
     notes: i.notes,
     value: s?.value ?? 0,
     effectCode,
     effectValue,
+  };
+});
+
+/**
+ * Modelos de Relicário, achatados com seus números — o jogo não precisa
+ * saber que `relics`/`relic_stats` são duas tabelas no banco, só que um
+ * modelo tem um elemento, uma classe e uma curva de captura/buff fixas.
+ */
+const outRelics = relics.map((r) => {
+  const s = relicStatByRelic.get(r.id);
+  if (!s) problems.push(`relic ${r.code} (${r.name}) has no relic_stats row`);
+  return {
+    code: r.code,
+    name: r.name,
+    element: code(elementById, r.elementId),
+    class: code(classById, r.classId),
+    notes: r.notes,
+    slotCapacity: s?.slotCapacity ?? 0,
+    baseCaptureRate: s?.baseCaptureRate ?? 0,
+    captureRatePerLevel: s?.captureRatePerLevel ?? 0,
+    maxLevel: s?.maxLevel ?? 1,
+    combatBuffBase: s?.combatBuffBase ?? 0,
+    combatBuffPerLevel: s?.combatBuffPerLevel ?? 0,
   };
 });
 
@@ -358,11 +412,26 @@ const outCreatures = creatures.map((c) => {
       code: code(abilityById, m.abilityId),
       learnLevel: m.learnLevel,
     })),
-    drops: (dropsByCreature.get(c.id) ?? []).map((d) => ({
-      itemCode: code(itemById, d.itemId),
-      chance: d.chance,
-      condition: d.condition,
-    })),
+    drops: (dropsByCreature.get(c.id) ?? []).map((d) => {
+      const droppedItem = itemById.get(d.itemId);
+      // A ligação classe → material que `items.classId` agora torna explícita
+      // só vale alguma coisa se os 26 `drops` concordarem com ela. Sem esta
+      // checagem, uma linha de drop errada (item da classe errada) passaria
+      // batido: nada mais no schema garante a correspondência.
+      if (droppedItem?.category === "material" && droppedItem.classId != null
+          && droppedItem.classId !== c.classId) {
+        problems.push(
+          `creature ${c.code} (${c.originalName}, class ${code(classById, c.classId)}) `
+            + `drops ${droppedItem.code} (${droppedItem.name}), which belongs to class `
+            + `${code(classById, droppedItem.classId)} — drop must match the item's own class`,
+        );
+      }
+      return {
+        itemCode: code(itemById, d.itemId),
+        chance: d.chance,
+        condition: d.condition,
+      };
+    }),
     awakening: awk
       ? {
           code: awk.code,
@@ -378,7 +447,7 @@ const bundle = {
   dataVersion: changelog[0]?.version ?? "0.00",
   generatedAt: new Date().toISOString(),
   source: FROM,
-  rules: shapeRules(combatRules, progressionRules),
+  rules: shapeRules(combatRules, progressionRules, relicRules),
   elements: elements.map((e) => ({ code: e.code, name: e.name })),
   elementalAdvantages: advantages.map((a) => ({
     attacker: code(elementById, a.attackerElementId),
@@ -405,6 +474,7 @@ const bundle = {
    * daqui, e sorteio de picareta de lá.
    */
   items: outItems,
+  relics: outRelics,
   economy: {
     currencyName: economyRules.currencyName,
     currencyNamePlural: economyRules.currencyNamePlural,
@@ -448,5 +518,6 @@ console.log(`dataVersion: ${bundle.dataVersion}`);
 console.log(`written:     ${OUT_FILE} (${kb} KB)`);
 console.log(
   `contents:    ${bundle.creatures.length} creatures, ${bundle.abilities.length} abilities, ` +
-    `${bundle.elementalAdvantages.length} elemental pairs, ${bundle.classes.length} classes`,
+    `${bundle.elementalAdvantages.length} elemental pairs, ${bundle.classes.length} classes, ` +
+    `${bundle.relics.length} relics`,
 );

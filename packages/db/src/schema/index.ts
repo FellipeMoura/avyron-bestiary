@@ -6,4 +6,5 @@ export * from "./gameMaps";
 export * from "./creatures";
 export * from "./gameplay";
 export * from "./stats";
+export * from "./relics";
 export * from "./lore";

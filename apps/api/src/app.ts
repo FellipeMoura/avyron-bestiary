@@ -34,6 +34,9 @@ import { miningRatesRouter } from "./modules/miningRates/MiningRatesRoutes.js";
 import { missionsRouter } from "./modules/missions/MissionsRoutes.js";
 import { npcsRouter } from "./modules/npcs/NpcsRoutes.js";
 import { progressionRulesRouter } from "./modules/progressionRules/ProgressionRulesRoutes.js";
+import { relicsRouter } from "./modules/relics/RelicsRoutes.js";
+import { relicStatsRouter } from "./modules/relicStats/RelicStatsRoutes.js";
+import { relicRulesRouter } from "./modules/relicRules/RelicRulesRoutes.js";
 
 /**
  * Resolve the CORS origin at boot. In dev, an empty CORS_ORIGIN means
@@ -94,6 +97,10 @@ export function createApp() {
   v1.use("/items", itemsRouter);
   v1.use("/item-stats", itemStatsRouter);
   v1.use("/economy-rules", economyRulesRouter);
+  // Relicário — equipment-based capture, replaces the old consumable items.
+  v1.use("/relics", relicsRouter);
+  v1.use("/relic-stats", relicStatsRouter);
+  v1.use("/relic-rules", relicRulesRouter);
   v1.use("/npcs", npcsRouter);
   v1.use("/merchant-offers", merchantOffersRouter);
   v1.use("/missions", missionsRouter);

@@ -35,6 +35,7 @@ export const TABLES: readonly string[] = [
   "drops",
   "mining_rates",
   "merchant_offers",
+  "relics",
 
   // Camada de números — o que o jogo executa.
   "creature_stats",
@@ -45,6 +46,8 @@ export const TABLES: readonly string[] = [
   "combat_rules",
   "economy_rules",
   "progression_rules",
+  "relic_stats",
+  "relic_rules",
 ];
 
 /**

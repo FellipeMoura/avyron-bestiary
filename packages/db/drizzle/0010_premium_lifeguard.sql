@@ -1,0 +1,2 @@
+ALTER TABLE "items" ADD CONSTRAINT "items_material_class_check" CHECK (("items"."category" = 'material' AND "items"."class_id" IS NOT NULL)
+          OR ("items"."category" != 'material' AND "items"."class_id" IS NULL));

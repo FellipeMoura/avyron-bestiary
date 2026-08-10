@@ -92,7 +92,7 @@ export async function buildContextMarkdown(): Promise<string> {
   lines.push("## Code prefixes");
   lines.push("_Every resource has a stable string code. Prefixes are preserved from the Portuguese source material — they are values, not code._");
   lines.push("- `CRT-*` creature · `DSP-*` awakening (**D**esperta**r**) · `ELE-*` element · `CLS-*` creature class");
-  lines.push("- `BIO-*` biome · `HAB-*` ability (**hab**ilidade) · `ITM-*` item · `NPC-*` npc · `MIS-*` mission · `DRP-*` drop");
+  lines.push("- `BIO-*` biome · `HAB-*` ability (**hab**ilidade) · `ITM-*` item · `NPC-*` npc · `MIS-*` mission · `DRP-*` drop · `RLC-*` relic (**relic**ário)");
   lines.push("- Maps use era-based codes: `PZ-01` (paleozoic), `MZ-01` (mesozoic), `CZ-01` (cenozoic).");
   lines.push("");
 
@@ -106,7 +106,7 @@ export async function buildContextMarkdown(): Promise<string> {
   lines.push("- **The game is called Avyron.** Eras carry in-world names: Aetheris (paleozoic), Titanor (mesozoic), Novaterra (cenozoic). The database enum stays English — only labels changed. See document `nomenclatura`.");
   lines.push("- **Roster is closed at three lineages:** Loricati (CLS-001, arthropods), Theria (CLS-002, synapsids), Draconis (CLS-003, sauropsids). Creatures outside them are out of scope.");
   lines.push("- **Creature ↔ Awakening is 1:1.** `POST /awakenings` for a creature that already has one → 409.");
-  lines.push("- **Classes do NOT influence combat** (Changelog 0.01). No damage / multiplier / stat fields on `creature_classes`. They also do not affect capture.");
+  lines.push("- **Classes have no CLS×CLS advantage matrix** (Changelog 0.01) — no damage/multiplier/stat fields on `creature_classes`, and no cycle like the elemental ring exists between classes. Refined by the Relicário system: an *equipment* (relic) can grant a class-linked bonus to capture chance or a combat status buff, but that is a property of the equipment, not a class-vs-class matchup. See documents `classes`, `captura`, `relicario`.");
   lines.push("- **Elements DO influence combat**, as a closed ring: Agua → Fogo → Natureza → Terra → Gelo → Eletricidade → Agua (arrow means \"beats\"). Advantage 2.0, disadvantage 0.5, everything else 1.0 by omission.");
   lines.push("- **3 eras × 3 maps × ~20 unique creatures.** Reappearances on later maps do not count toward the cap.");
   lines.push("");
@@ -119,7 +119,7 @@ export async function buildContextMarkdown(): Promise<string> {
   lines.push("- `creature-stats` — 1:1 with a creature, addressed by creature code. Five base stats (`baseHp`, `baseAttack`, `baseDefense`, `baseSpeed`, `baseCharge`) plus `growthRate` and `xpYield`.");
   lines.push("  Effective value: `floor(base * (1 + growthRate * (level - 1)))`.");
   lines.push("- `ability-stats` — 1:1 with an ability. `power` 0 means a status move; `effectCode` is the switch the battle system runs on.");
-  lines.push("- `capture-rules` — 1:1 with a creature. `catchRate` 1–255, higher is easier. `awakenedMultiplier` applies while the target is in Despertar Ancestral.");
+  lines.push("- `capture-rules` — 1:1 with a creature. `catchRate` 1–255, higher is easier — still the source field, but as of the Relicário system (`relicario` document) the capture formula reads it inverted, `resistance = 256 - catchRate`. `awakenedMultiplier` is vestigial: the new formula has no Despertar term.");
   lines.push("- `creature-abilities` — junction, which creature knows which move and at what level.");
   lines.push("- Damage: `floor((power * attack / defense) * 0.4 * elementMultiplier * random(0.90, 1.10))`, minimum 1.");
   lines.push("- The Despertar meter fills on damage taken (×1.0) and dealt (×0.5), scaled by `baseCharge / 50`. Full at 100, lasts 3 turns. See document `carga-e-despertar`.");
@@ -132,6 +132,26 @@ export async function buildContextMarkdown(): Promise<string> {
   lines.push("- Material cost: `itemCostBase + floor(level / itemCostLevelStep)` units of the **levelling creature's own class** item.");
   lines.push("- One material per class, `category: \"material\"`: ITM-019 Quitina Fossilizada (Loricati), ITM-020 Presa Fóssil (Theria), ITM-021 Escama Fóssil (Draconis).");
   lines.push("- They come from `drops` (creature × item, `condition: \"Derrota em combate\"`) — the class of the **defeated** creature decides which material falls, never the winner's. This is loot categorisation only; classes still do not influence combat.");
+  lines.push("");
+
+  lines.push("## Relicário capture system");
+  lines.push("_Replaces the old consumable capture items (`ITM-013..015`, deprecated). See document `relicario`._");
+  lines.push("- `relics` — catalog of relic **models** (`RLC-*`). `elementCode`/`classCode` are fixed for the model's whole lifetime.");
+  lines.push("- `relic-stats` — 1:1 with a relic, addressed by relic code. `slotCapacity`, `baseCaptureRate`, `captureRatePerLevel`, `maxLevel`, `combatBuffBase`, `combatBuffPerLevel`.");
+  lines.push("- `relic-rules` — **singleton**, global tuning: capture floor/ceiling and the three bonus/penalty points, plus the relic level-up gate (XP curve + class material cost, same two-part shape as creature levelling). `GET`/`PATCH` only.");
+  lines.push("- Capture formula (works in 0–100 percentage points end to end, no HP or Despertar term):");
+  lines.push("  ```");
+  lines.push("  relicRate = relic-stats.baseCaptureRate + (level - 1) * relic-stats.captureRatePerLevel");
+  lines.push("  resistance = 256 - capture-rules.catchRate");
+  lines.push("  base% = (relicRate / resistance) * 100");
+  lines.push("  final% = clamp(base%");
+  lines.push("             + sameElementBonusPct   (if relic.elementCode == creature.elementCode)");
+  lines.push("             + sameClassBonusPct     (if relic.classCode == creature.classCode)");
+  lines.push("             - elementDisadvantagePenaltyPct  (if relic's element is at a disadvantage vs the creature's, per /elemental-advantages)");
+  lines.push("           , captureFloorPct, captureCeilPct)");
+  lines.push("  ```");
+  lines.push("- A capture attempt still consumes the turn (existing combat rule, not part of this system).");
+  lines.push("- No consumable is spent — what limits the player is `relic-stats.slotCapacity` and general storage, both enforced by the game, not this catalog.");
   lines.push("");
 
   lines.push("## Mining system");
@@ -206,6 +226,9 @@ export async function buildContextMarkdown(): Promise<string> {
     "capture-rules",
     "creature-abilities",
     "items",
+    "relics",
+    "relic-stats",
+    "relic-rules",
     "mining-rates",
     "npcs",
     "missions",

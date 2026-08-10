@@ -19,17 +19,38 @@ export const abilities = pgTable("abilities", {
   ...timestamps,
 });
 
-export const items = pgTable("items", {
-  id: serial("id").primaryKey(),
-  code: text("code").notNull().unique(),
-  name: text("name").notNull(),
-  /** Enum, not free text — the export filters minable ore on this column. */
-  category: itemCategoryEnum("category").notNull().default("mineral"),
-  effect: text("effect"),
-  acquisition: text("acquisition"),
-  notes: text("notes"),
-  ...timestamps,
-});
+export const items = pgTable(
+  "items",
+  {
+    id: serial("id").primaryKey(),
+    code: text("code").notNull().unique(),
+    name: text("name").notNull(),
+    /** Enum, not free text — the export filters minable ore on this column. */
+    category: itemCategoryEnum("category").notNull().default("mineral"),
+    /**
+     * Which class this material belongs to — set iff `category = 'material'`.
+     *
+     * Before this column, "Draconis levels up on Escama Fóssil" only existed
+     * implicitly, repeated across 5 `drops` rows (one per Draconis creature).
+     * Nothing enforced that a new Draconis' drop actually pointed at ITM-021,
+     * and nothing let the game ask "what does my active creature's class
+     * need" without scanning every creature's drops. This is that answer,
+     * direct — same shape as `mining_rates.classId`.
+     */
+    classId: integer("class_id").references(() => creatureClasses.id),
+    effect: text("effect"),
+    acquisition: text("acquisition"),
+    notes: text("notes"),
+    ...timestamps,
+  },
+  (t) => ({
+    materialClassCheck: check(
+      "items_material_class_check",
+      sql`(${t.category} = 'material' AND ${t.classId} IS NOT NULL)
+          OR (${t.category} != 'material' AND ${t.classId} IS NULL)`,
+    ),
+  }),
+);
 
 export const npcs = pgTable("npcs", {
   id: serial("id").primaryKey(),

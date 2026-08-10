@@ -64,6 +64,27 @@
       "when": 1786360000494,
       "tag": "0008_colorful_rachel_grey",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1786379748052,
+      "tag": "0009_handy_madelyne_pryor",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786379877460,
+      "tag": "0010_premium_lifeguard",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1786386177347,
+      "tag": "0011_broad_charles_xavier",
+      "breakpoints": true
     }
   ]
 }

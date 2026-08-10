@@ -24,3 +24,8 @@
 {"id":24,"creature_id":25,"catch_rate":185,"awakened_multiplier":0.5,"notes":null,"created_at":"2026-08-07T00:00:26.151Z","updated_at":"2026-08-07T00:46:38.016Z"}
 {"id":25,"creature_id":26,"catch_rate":155,"awakened_multiplier":0.5,"notes":null,"created_at":"2026-08-07T00:00:26.151Z","updated_at":"2026-08-07T00:46:38.017Z"}
 {"id":26,"creature_id":27,"catch_rate":175,"awakened_multiplier":0.5,"notes":null,"created_at":"2026-08-07T00:00:26.151Z","updated_at":"2026-08-07T00:46:38.018Z"}
+{"id":27,"creature_id":28,"catch_rate":175,"awakened_multiplier":0.5,"notes":null,"created_at":"2026-08-10T19:16:38.540Z","updated_at":"2026-08-10T19:16:38.540Z"}
+{"id":28,"creature_id":29,"catch_rate":140,"awakened_multiplier":0.5,"notes":null,"created_at":"2026-08-10T19:16:38.789Z","updated_at":"2026-08-10T19:16:38.789Z"}
+{"id":29,"creature_id":30,"catch_rate":70,"awakened_multiplier":0.35,"notes":null,"created_at":"2026-08-10T19:16:38.943Z","updated_at":"2026-08-10T19:16:38.943Z"}
+{"id":30,"creature_id":31,"catch_rate":75,"awakened_multiplier":0.35,"notes":null,"created_at":"2026-08-10T19:16:39.075Z","updated_at":"2026-08-10T19:16:39.075Z"}
+{"id":31,"creature_id":32,"catch_rate":190,"awakened_multiplier":0.5,"notes":null,"created_at":"2026-08-10T19:16:39.207Z","updated_at":"2026-08-10T19:16:39.207Z"}

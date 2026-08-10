@@ -20,6 +20,7 @@
     "db:restore": "pnpm --filter @bestiary/db run restore",
     "db:studio": "pnpm --filter @bestiary/db run studio",
     "models:optimize": "node scripts/optimize-models.mjs",
+    "badges:optimize": "node scripts/optimize-badges.mjs",
     "db:reset": "pnpm db:create && pnpm db:generate && pnpm db:migrate && pnpm db:seed",
     "openapi:generate": "pnpm --filter @bestiary/web run openapi:generate",
     "game:export": "node scripts/export-game-data.mjs"

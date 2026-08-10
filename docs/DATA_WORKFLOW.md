@@ -192,24 +192,24 @@ Dois passos, como habilidade: o item e os números dele.
 
 ```powershell
 $body = @{
-  code = "ITM-019"; name = "Resina Turva"; category = "capture"
-  effect = "Aumenta a chance de captura de criaturas feridas."
+  code = "ITM-022"; name = "Emplastro Acido"; category = "heal"
+  effect = "Recupera uma fatia media do vigor da criatura."
   acquisition = "Comerciante"
-  reason = "Faixa intermediaria entre Resina Comum e Densa"
+  reason = "Faixa intermediaria entre Emplastro de Limo e Emplastro Espesso"
   impact = "Suaviza o salto de preco de 60 para 180"
 } | ConvertTo-Json
 Invoke-RestMethod "$api/items" -Method Post -Headers $h -Body $body
 
 $body = @{
-  itemCode = "ITM-019"; value = 110
-  effectCode = "capture_bonus"; effectValue = 2.0
-  reason = "Preco entre os dois vizinhos, bonus proporcional"
+  itemCode = "ITM-022"; value = 110
+  effectCode = "heal_percent"; effectValue = 50
+  reason = "Preco entre os dois vizinhos, cura proporcional"
   impact = "~70s de mineracao no PZ-01"
 } | ConvertTo-Json
 Invoke-RestMethod "$api/item-stats" -Method Post -Headers $h -Body $body
 ```
 
-`category` válidas: `mineral`, `capture`, `heal`. **Não é rótulo** — o export filtra minério nesta coluna, e um consumível marcado como `mineral` vira minério de chão.
+`category` válidas: `mineral`, `capture`, `heal`, `material`. **Não é rótulo** — o export filtra minério nesta coluna, e um consumível marcado como `mineral` vira minério de chão. `capture` é uma categoria legada: o sistema de captura passou a usar o Relicário (equipamento, ver documento `relicario`), e nenhum item novo deve nascer com essa categoria.
 
 `effectCode` válidos: `none`, `capture_bonus`, `heal_flat`, `heal_percent`. O `effectValue` muda de unidade conforme o código: multiplicador em `capture_bonus`, pontos de HP em `heal_flat`, porcentagem do HP máximo em `heal_percent`.
 
@@ -227,8 +227,8 @@ Invoke-RestMethod "$api/npcs" -Method Post -Headers $h -Body $body
 
 $body = @{
   items = @(
-    @{ npcCode="NPC-002"; itemCode="ITM-013"; sortOrder=0 }
-    @{ npcCode="NPC-002"; itemCode="ITM-019"; price=140; sortOrder=1 }
+    @{ npcCode="NPC-002"; itemCode="ITM-016"; sortOrder=0 }
+    @{ npcCode="NPC-002"; itemCode="ITM-022"; price=140; sortOrder=1 }
   )
   reason = "..."; impact = "..."
 } | ConvertTo-Json -Depth 4
@@ -246,7 +246,7 @@ O export **aborta** se um NPC com papel `merchant` não tiver nenhuma oferta —
 ```powershell
 $body = @{
   sellRatio = 0.35
-  reason = "0.40 deixava a mineracao pagar rapido demais pela Resina Ancestral"
+  reason = "0.40 deixava a mineracao pagar rapido demais pela Seiva Primordial"
   impact = "Alonga a progressao economica em ~15%"
 } | ConvertTo-Json
 Invoke-RestMethod "$api/economy-rules" -Method Patch -Headers $h -Body $body

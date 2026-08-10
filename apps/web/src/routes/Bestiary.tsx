@@ -37,6 +37,7 @@ export function Bestiary() {
   const mapByCode = new Map(maps.data?.map((m) => [m.id, m.code]) ?? []);
 
   const count = creatures.data?.length;
+  const withModel = creatures.data?.filter((c) => c.modelUrl).length;
 
   return (
     <div className="space-y-10">
@@ -45,6 +46,14 @@ export function Bestiary() {
         <h1 className="mt-2 font-display text-2xl text-bone">Bestiário</h1>
         <p className="mt-3 font-mono text-xs text-graphite">
           {count ?? "…"} {count !== undefined ? plural(count, "resultado") : "carregando"}
+          {count !== undefined && withModel !== undefined && (
+            <>
+              {" · "}
+              <span className={withModel === count ? "text-moss" : "text-bone"}>
+                {withModel} com modelo 3D
+              </span>
+            </>
+          )}
         </p>
       </header>
 
@@ -92,26 +101,47 @@ export function Bestiary() {
       )}
 
       <ul className="divide-y divide-graphite/30 border-y border-graphite/30">
-        {creatures.data?.map((c) => (
-          <li key={c.code}>
-            <Link
-              to={`/bestiary/${c.code}`}
-              className="grid grid-cols-[110px_1fr] items-baseline gap-6 py-4 transition-colors hover:bg-slate/50 md:grid-cols-[110px_1.2fr_1fr_1fr_1fr]"
-            >
-              <span className="font-mono text-xs text-ember">{c.code}</span>
-              <span className="font-display text-lg text-bone">{c.originalName}</span>
-              <span className="hidden font-mono text-xs text-bone/70 md:inline">
-                {classByCode.get(c.classId) ?? "—"}
-              </span>
-              <span className="hidden font-mono text-xs text-bone/70 md:inline">
-                {elemByCode.get(c.elementId) ?? "—"}
-              </span>
-              <span className="hidden font-mono text-xs text-bone/70 md:inline">
-                {c.mapId != null ? mapByCode.get(c.mapId) ?? "—" : "—"}
-              </span>
-            </Link>
-          </li>
-        ))}
+        {creatures.data?.map((c) => {
+          const rowClassCode = classByCode.get(c.classId);
+          const rowElementCode = elemByCode.get(c.elementId);
+          return (
+            <li key={c.code}>
+              <Link
+                to={`/bestiary/${c.code}`}
+                className="grid grid-cols-[110px_1fr] items-baseline gap-6 py-4 transition-colors hover:bg-slate/50 md:grid-cols-[110px_1.2fr_1fr_1fr_1fr]"
+              >
+                <span className="inline-flex items-center gap-1.5 font-mono text-xs text-ember">
+                  {c.code}
+                  {c.modelUrl && (
+                    <span
+                      className="text-[10px] text-moss"
+                      title="Modelo 3D disponível"
+                      aria-label="Modelo 3D disponível"
+                    >
+                      [3D]
+                    </span>
+                  )}
+                </span>
+                <span className="font-display text-lg text-bone">{c.originalName}</span>
+                <span className="hidden items-center gap-1.5 font-mono text-xs text-bone/70 md:inline-flex">
+                  {rowClassCode && (
+                    <img src={`/${rowClassCode}.webp`} alt="" className="h-5 w-5 shrink-0" />
+                  )}
+                  {rowClassCode ?? "—"}
+                </span>
+                <span className="hidden items-center gap-1.5 font-mono text-xs text-bone/70 md:inline-flex">
+                  {rowElementCode && (
+                    <img src={`/${rowElementCode}.webp`} alt="" className="h-5 w-5 shrink-0" />
+                  )}
+                  {rowElementCode ?? "—"}
+                </span>
+                <span className="hidden font-mono text-xs text-bone/70 md:inline">
+                  {c.mapId != null ? mapByCode.get(c.mapId) ?? "—" : "—"}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

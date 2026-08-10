@@ -36,7 +36,7 @@ import {
  * lugar com peso visual.
  */
 
-const CATEGORY_ORDER: ItemCategory[] = ["mineral", "capture", "heal"];
+const CATEGORY_ORDER: ItemCategory[] = ["mineral", "heal"];
 
 export function Items() {
   const [params, setParams] = useSearchParams();
