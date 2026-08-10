@@ -1,0 +1,6 @@
+{"id":1,"code":"ELE-001","name":"Fogo","notes":"Elemento inicial","created_at":"2026-08-04T15:01:55.684Z","updated_at":"2026-08-04T16:10:47.218Z"}
+{"id":2,"code":"ELE-002","name":"Agua","notes":"Elemento inicial","created_at":"2026-08-04T15:01:55.684Z","updated_at":"2026-08-04T16:10:47.221Z"}
+{"id":3,"code":"ELE-003","name":"Natureza","notes":"Elemento inicial","created_at":"2026-08-04T15:01:55.684Z","updated_at":"2026-08-04T16:10:47.222Z"}
+{"id":4,"code":"ELE-004","name":"Terra","notes":"Elemento inicial","created_at":"2026-08-04T15:01:55.684Z","updated_at":"2026-08-04T16:10:47.223Z"}
+{"id":5,"code":"ELE-005","name":"Eletricidade","notes":"Elemento inicial","created_at":"2026-08-04T15:01:55.684Z","updated_at":"2026-08-04T16:10:47.224Z"}
+{"id":6,"code":"ELE-006","name":"Gelo","notes":"Elemento frio; espera-se sinergia com ambientes cenozoicos e vantagem contra Natureza.","created_at":"2026-08-04T16:58:29.457Z","updated_at":"2026-08-04T16:58:29.457Z"}

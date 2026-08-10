@@ -1,0 +1,21 @@
+{"id":1,"item_id":1,"value":5,"effect_code":"none","effect_value":0,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
+{"id":2,"item_id":2,"value":12,"effect_code":"none","effect_value":0,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
+{"id":3,"item_id":3,"value":14,"effect_code":"none","effect_value":0,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
+{"id":4,"item_id":4,"value":20,"effect_code":"none","effect_value":0,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
+{"id":5,"item_id":5,"value":60,"effect_code":"none","effect_value":0,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
+{"id":6,"item_id":6,"value":30,"effect_code":"none","effect_value":0,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
+{"id":7,"item_id":7,"value":150,"effect_code":"none","effect_value":0,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
+{"id":8,"item_id":8,"value":150,"effect_code":"none","effect_value":0,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
+{"id":9,"item_id":9,"value":150,"effect_code":"none","effect_value":0,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
+{"id":10,"item_id":10,"value":150,"effect_code":"none","effect_value":0,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
+{"id":11,"item_id":11,"value":150,"effect_code":"none","effect_value":0,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
+{"id":12,"item_id":12,"value":150,"effect_code":"none","effect_value":0,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
+{"id":13,"item_id":13,"value":60,"effect_code":"capture_bonus","effect_value":1.5,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
+{"id":14,"item_id":14,"value":180,"effect_code":"capture_bonus","effect_value":2.5,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
+{"id":15,"item_id":15,"value":500,"effect_code":"capture_bonus","effect_value":4,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
+{"id":16,"item_id":16,"value":80,"effect_code":"heal_percent","effect_value":30,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
+{"id":17,"item_id":17,"value":220,"effect_code":"heal_percent","effect_value":70,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
+{"id":18,"item_id":18,"value":600,"effect_code":"heal_percent","effect_value":100,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
+{"id":19,"item_id":19,"value":0,"effect_code":"none","effect_value":0,"notes":"Material de progressão: não é mercadoria. Sem oferta de comerciante e sem valor de venda, para não competir com a renda de mineração.","created_at":"2026-08-10T11:10:13.951Z","updated_at":"2026-08-10T11:10:13.951Z"}
+{"id":20,"item_id":20,"value":0,"effect_code":"none","effect_value":0,"notes":"Material de progressão: não é mercadoria.","created_at":"2026-08-10T11:10:13.951Z","updated_at":"2026-08-10T11:10:13.951Z"}
+{"id":21,"item_id":21,"value":0,"effect_code":"none","effect_value":0,"notes":"Material de progressão: não é mercadoria.","created_at":"2026-08-10T11:10:13.951Z","updated_at":"2026-08-10T11:10:13.951Z"}

@@ -1,0 +1,27 @@
+node_modules/
+dist/
+dist-node/
+build/
+.turbo/
+*.tsbuildinfo
+
+.env
+.env.local
+.env.*.local
+
+# Source files stay local — each dev brings their own.
+fontes/*.docx
+fontes/*.xlsx
+!fontes/README.md
+
+# Pre-compression .glb originals (~90 MB). Kept locally so a texture pass can
+# be redone from source instead of re-compressing already-compressed art.
+# The shipped models live in apps/web/public/models/.
+apps/web/.model-backups/
+
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+*.log

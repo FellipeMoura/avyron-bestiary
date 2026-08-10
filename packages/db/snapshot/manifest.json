@@ -1,0 +1,30 @@
+{
+  "version": "0.111",
+  "tables": {
+    "elements": 6,
+    "creature_classes": 3,
+    "biomes": 1,
+    "game_maps": 1,
+    "items": 21,
+    "design_documents": 32,
+    "changelog": 111,
+    "elemental_advantages": 12,
+    "map_biomes": 0,
+    "npcs": 1,
+    "creatures": 26,
+    "abilities": 31,
+    "awakenings": 26,
+    "missions": 0,
+    "drops": 26,
+    "mining_rates": 48,
+    "merchant_offers": 6,
+    "creature_stats": 26,
+    "ability_stats": 31,
+    "capture_rules": 26,
+    "creature_abilities": 156,
+    "item_stats": 21,
+    "combat_rules": 1,
+    "economy_rules": 1,
+    "progression_rules": 1
+  }
+}

@@ -1,0 +1,31 @@
+CREATE TABLE IF NOT EXISTS "combat_rules" (
+	"id" integer PRIMARY KEY DEFAULT 1 NOT NULL,
+	"damage_constant" real DEFAULT 0.4 NOT NULL,
+	"damage_variance_min" real DEFAULT 0.9 NOT NULL,
+	"damage_variance_max" real DEFAULT 1.1 NOT NULL,
+	"damage_minimum" integer DEFAULT 1 NOT NULL,
+	"charge_max" integer DEFAULT 100 NOT NULL,
+	"charge_taken_multiplier" real DEFAULT 1 NOT NULL,
+	"charge_dealt_multiplier" real DEFAULT 0.5 NOT NULL,
+	"charge_neutral_charge" integer DEFAULT 50 NOT NULL,
+	"capture_min_chance" real DEFAULT 0.01 NOT NULL,
+	"capture_max_chance" real DEFAULT 0.95 NOT NULL,
+	"level_min" integer DEFAULT 1 NOT NULL,
+	"level_max" integer DEFAULT 50 NOT NULL,
+	"element_neutral_multiplier" real DEFAULT 1 NOT NULL,
+	"notes" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "combat_rules_singleton" CHECK ("combat_rules"."id" = 1),
+	CONSTRAINT "combat_rules_damage_constant_range" CHECK ("combat_rules"."damage_constant" > 0 AND "combat_rules"."damage_constant" <= 2),
+	CONSTRAINT "combat_rules_variance_order" CHECK ("combat_rules"."damage_variance_min" > 0 AND "combat_rules"."damage_variance_min" <= "combat_rules"."damage_variance_max"),
+	CONSTRAINT "combat_rules_damage_minimum_range" CHECK ("combat_rules"."damage_minimum" >= 0 AND "combat_rules"."damage_minimum" <= 100),
+	CONSTRAINT "combat_rules_charge_max_range" CHECK ("combat_rules"."charge_max" > 0 AND "combat_rules"."charge_max" <= 1000),
+	CONSTRAINT "combat_rules_charge_multiplier_range" CHECK ("combat_rules"."charge_taken_multiplier" >= 0 AND "combat_rules"."charge_taken_multiplier" <= 20
+          AND "combat_rules"."charge_dealt_multiplier" >= 0 AND "combat_rules"."charge_dealt_multiplier" <= 20),
+	CONSTRAINT "combat_rules_charge_neutral_range" CHECK ("combat_rules"."charge_neutral_charge" > 0 AND "combat_rules"."charge_neutral_charge" <= 999),
+	CONSTRAINT "combat_rules_capture_chance_order" CHECK ("combat_rules"."capture_min_chance" >= 0 AND "combat_rules"."capture_min_chance" <= "combat_rules"."capture_max_chance"
+          AND "combat_rules"."capture_max_chance" <= 1),
+	CONSTRAINT "combat_rules_level_order" CHECK ("combat_rules"."level_min" >= 1 AND "combat_rules"."level_min" <= "combat_rules"."level_max" AND "combat_rules"."level_max" <= 999),
+	CONSTRAINT "combat_rules_element_neutral_range" CHECK ("combat_rules"."element_neutral_multiplier" > 0 AND "combat_rules"."element_neutral_multiplier" <= 10)
+);

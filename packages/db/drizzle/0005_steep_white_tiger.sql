@@ -1,0 +1,2 @@
+ALTER TABLE "creature_stats" DROP CONSTRAINT "creature_stats_size_range";--> statement-breakpoint
+ALTER TABLE "creature_stats" ADD CONSTRAINT "creature_stats_size_range" CHECK ("creature_stats"."size_meters" >= 0.9::real AND "creature_stats"."size_meters" <= 4.5::real);

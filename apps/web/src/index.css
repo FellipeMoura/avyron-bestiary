@@ -1,0 +1,86 @@
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/space-grotesk";
+@import "@fontsource-variable/jetbrains-mono";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    background: #0a0b0d;
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-void text-bone font-sans antialiased;
+    font-feature-settings: "ss01", "cv11";
+  }
+  /* Kill the default rounded focus ring; use a sharp offset instead. */
+  :focus-visible {
+    outline: 2px solid #e89a3c;
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: #e89a3c;
+    color: #0a0b0d;
+  }
+}
+
+@layer components {
+  /* Rendered markdown body — used only inside the document reader. Rest of
+     the UI hand-builds typography with utilities. */
+  .prose-doc h1 {
+    @apply mt-10 font-display text-xl text-bone;
+  }
+  .prose-doc h2 {
+    @apply mt-8 font-display text-lg text-bone;
+  }
+  .prose-doc h3 {
+    @apply mt-6 font-display text-base text-bone;
+  }
+  .prose-doc p {
+    @apply mt-4 leading-relaxed text-bone/85;
+  }
+  .prose-doc ul {
+    @apply mt-4 space-y-1 pl-5 text-bone/85 marker:text-graphite;
+    list-style: disc;
+  }
+  .prose-doc ol {
+    @apply mt-4 space-y-1 pl-5 text-bone/85 marker:text-graphite;
+    list-style: decimal;
+  }
+  .prose-doc strong {
+    @apply font-semibold text-bone;
+  }
+  .prose-doc em {
+    @apply italic;
+  }
+  .prose-doc code {
+    @apply bg-slate px-1 py-0.5 font-mono text-xs text-ember;
+  }
+  .prose-doc a {
+    @apply text-ember underline underline-offset-2 hover:text-bone;
+  }
+}
+
+@layer utilities {
+  /* Vertical fossil scale — the single decorative element, used on hero. */
+  .fossil-scale {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      #7baa8e 0 1px,
+      transparent 1px 8px
+    );
+  }
+  /* Respect reduced motion universally. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
