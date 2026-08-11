@@ -13,17 +13,19 @@ import { timestamps } from "./timestamps";
  * A model's `elementId`/`classId` are fixed for its whole lifetime — they do
  * not change as the relic levels up. Only `relic_stats` (the numbers layer)
  * scales with level.
+ *
+ * Both are nullable: the starter relic the player boots with is neutral —
+ * no elemental or class affinity, `null = null` on both — same "no
+ * affinity" pattern `abilities.elementId` already uses. A specialized relic
+ * still has both set; the game reads absence as "no bonus/penalty from this
+ * axis" (`RelicMath.capture_chance`), not as a data gap.
  */
 export const relics = pgTable("relics", {
   id: serial("id").primaryKey(),
   code: text("code").notNull().unique(),
   name: text("name").notNull(),
-  elementId: integer("element_id")
-    .notNull()
-    .references(() => elements.id),
-  classId: integer("class_id")
-    .notNull()
-    .references(() => creatureClasses.id),
+  elementId: integer("element_id").references(() => elements.id),
+  classId: integer("class_id").references(() => creatureClasses.id),
   notes: text("notes"),
   ...timestamps,
 });

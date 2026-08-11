@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Filter } from "../components/Filter";
 import { useCreatureClasses, useCreatures, useElements, useMaps } from "../hooks/useApi";
+import { cn } from "../lib/cn";
 import { ERA_LABEL, plural } from "../lib/labels";
 
 const ERAS = [
@@ -12,6 +14,7 @@ const ERAS = [
 
 export function Bestiary() {
   const [params, setParams] = useSearchParams();
+  const [copied, setCopied] = useState(false);
   const era = params.get("era") ?? "";
   const classCode = params.get("classCode") ?? "";
   const elementCode = params.get("elementCode") ?? "";
@@ -30,6 +33,13 @@ export function Bestiary() {
     if (value) next.set(key, value);
     else next.delete(key);
     setParams(next, { replace: true });
+  };
+
+  const copyJson = async () => {
+    if (!creatures.data) return;
+    await navigator.clipboard.writeText(JSON.stringify(creatures.data, null, 2));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   };
 
   const classByCode = new Map(classes.data?.map((c) => [c.id, c.code]) ?? []);
@@ -88,6 +98,18 @@ export function Bestiary() {
             })),
           ]}
         />
+        <button
+          type="button"
+          onClick={copyJson}
+          disabled={!creatures.data}
+          className={cn(
+            "ml-auto border border-graphite/60 px-2 py-1.5 font-mono text-micro uppercase tracking-widest",
+            "text-graphite transition-colors hover:border-bone hover:text-bone",
+            "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-graphite/60 disabled:hover:text-graphite",
+          )}
+        >
+          {copied ? "copiado" : "copiar json"}
+        </button>
       </section>
 
       {creatures.isLoading && <p className="font-mono text-xs text-graphite">carregando…</p>}

@@ -27,13 +27,23 @@ function isUniqueViolation(err: any): boolean {
   return err?.code === "23505" || err?.cause?.code === "23505";
 }
 
+async function resolveElement(tx: Tx, code: string | null | undefined): Promise<number | null> {
+  if (!code) return null;
+  return resolveCodeInTx(tx, schema.elements, code, "elementCode");
+}
+
+async function resolveClass(tx: Tx, code: string | null | undefined): Promise<number | null> {
+  if (!code) return null;
+  return resolveCodeInTx(tx, schema.creatureClasses, code, "classCode");
+}
+
 async function resolveRelicRefs(
   tx: Tx,
   body: Omit<CreateRelicBody, "reason" | "impact">,
 ): Promise<typeof schema.relics.$inferInsert> {
   const [elementId, classId] = await Promise.all([
-    resolveCodeInTx(tx, schema.elements, body.elementCode, "elementCode"),
-    resolveCodeInTx(tx, schema.creatureClasses, body.classCode, "classCode"),
+    resolveElement(tx, body.elementCode),
+    resolveClass(tx, body.classCode),
   ]);
   return {
     code: body.code,
@@ -52,12 +62,8 @@ async function resolvePartialRelicRefs(
   if (patch.code !== undefined) out.code = patch.code;
   if (patch.name !== undefined) out.name = patch.name;
   if (patch.notes !== undefined) out.notes = patch.notes ?? null;
-  if (patch.elementCode !== undefined) {
-    out.elementId = await resolveCodeInTx(tx, schema.elements, patch.elementCode, "elementCode");
-  }
-  if (patch.classCode !== undefined) {
-    out.classId = await resolveCodeInTx(tx, schema.creatureClasses, patch.classCode, "classCode");
-  }
+  if (patch.elementCode !== undefined) out.elementId = await resolveElement(tx, patch.elementCode);
+  if (patch.classCode !== undefined) out.classId = await resolveClass(tx, patch.classCode);
   return out;
 }
 

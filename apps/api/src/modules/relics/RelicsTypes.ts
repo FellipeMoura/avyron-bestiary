@@ -10,8 +10,8 @@ export const RelicSchema = z
     id: z.number().int(),
     code: z.string().openapi({ example: "RLC-001" }),
     name: z.string(),
-    elementId: z.number().int(),
-    classId: z.number().int(),
+    elementId: z.number().int().nullable(),
+    classId: z.number().int().nullable(),
     notes: z.string().nullable(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
@@ -50,20 +50,27 @@ export const CodeParamsSchema = z.object({
 // ---------------------------------------------------------------------------
 // create / update — FKs by CODE, resolved server-side. Element and class are
 // fixed for the model's lifetime (design decision — see `relicario` document),
-// so they are required on create and, unlike most FK fields, are NOT expected
-// to be repatched later; PATCH still allows it for a genuine data fix.
+// so unlike most FK fields they are NOT expected to be repatched later; PATCH
+// still allows it for a genuine data fix.
+//
+// Both are nullish: a neutral relic (no elemental/class affinity — the
+// player's starter model) omits one or both. Same "absence = no affinity"
+// contract `abilities.elementCode` already uses, not a required-then-relaxed
+// field.
 // ---------------------------------------------------------------------------
 
 const relicCoreSchema = z.object({
   code: z.string().min(3).max(16).openapi({ example: "RLC-001" }),
   name: z.string().min(1).max(128).openapi({ example: "Relicário de Água — Loricati" }),
-  elementCode: z.string().openapi({
+  elementCode: z.string().nullish().openapi({
     example: "ELE-002",
-    description: "Reference by element code — resolved server-side to elementId. Fixed per model.",
+    description:
+      "Reference by element code — resolved server-side to elementId. Fixed per model. Null/absent = no elemental affinity.",
   }),
-  classCode: z.string().openapi({
+  classCode: z.string().nullish().openapi({
     example: "CLS-001",
-    description: "Reference by class code — resolved server-side to classId. Fixed per model.",
+    description:
+      "Reference by class code — resolved server-side to classId. Fixed per model. Null/absent = no class affinity.",
   }),
   notes: z.string().max(2000).nullish(),
 });

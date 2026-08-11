@@ -340,6 +340,23 @@ const outMerchants = npcs
     };
   });
 
+/**
+ * Só quem tem papel de duelista — o NPC de arena (documento
+ * `glifos-e-portais`). Identidade e posicionamento do catálogo; qual
+ * criatura o duelista usa e qual Glifo ele concede ficam de propósito fora
+ * daqui, como decisão de conteúdo do jogo (mesmo nível que `starter_code`
+ * já é em `WorldRoot`) — o catálogo não tem coluna pra isso e não precisa.
+ */
+const outDuelists = npcs
+  .filter((n) => n.role === "duelist")
+  .map((n) => ({
+    code: n.code,
+    name: n.name,
+    faction: n.faction,
+    map: code(mapById, n.mapId),
+    notes: n.notes,
+  }));
+
 const outAbilities = abilities.map((a) => {
   const s = abilityStatByAbility.get(a.id);
   if (!s) problems.push(`ability ${a.code} (${a.name}) has no ability_stats row`);
@@ -482,6 +499,7 @@ const bundle = {
     sellRatio: economyRules.sellRatio,
   },
   merchants: outMerchants,
+  duelists: outDuelists,
   mining: {
     items: minerals.map((i) => ({
       code: i.code,

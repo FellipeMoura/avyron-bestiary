@@ -64,12 +64,6 @@
 {"id":64,"creature_id":11,"ability_id":25,"learn_level":20,"sort_order":3,"created_at":"2026-08-07T00:00:26.219Z","updated_at":"2026-08-07T00:46:38.257Z"}
 {"id":65,"creature_id":11,"ability_id":9,"learn_level":28,"sort_order":4,"created_at":"2026-08-07T00:00:26.219Z","updated_at":"2026-08-07T00:46:38.258Z"}
 {"id":66,"creature_id":11,"ability_id":28,"learn_level":1,"sort_order":5,"created_at":"2026-08-07T00:00:26.219Z","updated_at":"2026-08-07T00:46:38.259Z"}
-{"id":67,"creature_id":13,"ability_id":4,"learn_level":1,"sort_order":0,"created_at":"2026-08-07T00:00:26.219Z","updated_at":"2026-08-07T00:46:38.260Z"}
-{"id":68,"creature_id":13,"ability_id":19,"learn_level":8,"sort_order":1,"created_at":"2026-08-07T00:00:26.219Z","updated_at":"2026-08-07T00:46:38.261Z"}
-{"id":69,"creature_id":13,"ability_id":5,"learn_level":12,"sort_order":2,"created_at":"2026-08-07T00:00:26.219Z","updated_at":"2026-08-07T00:46:38.261Z"}
-{"id":70,"creature_id":13,"ability_id":25,"learn_level":20,"sort_order":3,"created_at":"2026-08-07T00:00:26.219Z","updated_at":"2026-08-07T00:46:38.262Z"}
-{"id":71,"creature_id":13,"ability_id":6,"learn_level":28,"sort_order":4,"created_at":"2026-08-07T00:00:26.219Z","updated_at":"2026-08-07T00:46:38.264Z"}
-{"id":72,"creature_id":13,"ability_id":27,"learn_level":1,"sort_order":5,"created_at":"2026-08-07T00:00:26.219Z","updated_at":"2026-08-07T00:46:38.265Z"}
 {"id":73,"creature_id":14,"ability_id":4,"learn_level":1,"sort_order":0,"created_at":"2026-08-07T00:00:26.219Z","updated_at":"2026-08-07T00:46:38.266Z"}
 {"id":74,"creature_id":14,"ability_id":19,"learn_level":8,"sort_order":1,"created_at":"2026-08-07T00:00:26.219Z","updated_at":"2026-08-07T00:46:38.267Z"}
 {"id":75,"creature_id":14,"ability_id":5,"learn_level":12,"sort_order":2,"created_at":"2026-08-07T00:00:26.219Z","updated_at":"2026-08-07T00:46:38.267Z"}
@@ -184,3 +178,9 @@
 {"id":184,"creature_id":32,"ability_id":25,"learn_level":20,"sort_order":3,"created_at":"2026-08-10T19:16:39.222Z","updated_at":"2026-08-10T19:16:39.222Z"}
 {"id":185,"creature_id":32,"ability_id":15,"learn_level":28,"sort_order":4,"created_at":"2026-08-10T19:16:39.222Z","updated_at":"2026-08-10T19:16:39.222Z"}
 {"id":186,"creature_id":32,"ability_id":30,"learn_level":1,"sort_order":5,"created_at":"2026-08-10T19:16:39.222Z","updated_at":"2026-08-10T19:16:39.222Z"}
+{"id":187,"creature_id":33,"ability_id":13,"learn_level":1,"sort_order":0,"created_at":"2026-08-11T22:01:46.513Z","updated_at":"2026-08-11T22:01:46.513Z"}
+{"id":188,"creature_id":33,"ability_id":19,"learn_level":8,"sort_order":1,"created_at":"2026-08-11T22:01:46.513Z","updated_at":"2026-08-11T22:01:46.513Z"}
+{"id":189,"creature_id":33,"ability_id":14,"learn_level":12,"sort_order":2,"created_at":"2026-08-11T22:01:46.513Z","updated_at":"2026-08-11T22:01:46.513Z"}
+{"id":190,"creature_id":33,"ability_id":25,"learn_level":20,"sort_order":3,"created_at":"2026-08-11T22:01:46.513Z","updated_at":"2026-08-11T22:01:46.513Z"}
+{"id":191,"creature_id":33,"ability_id":15,"learn_level":28,"sort_order":4,"created_at":"2026-08-11T22:01:46.513Z","updated_at":"2026-08-11T22:01:46.513Z"}
+{"id":192,"creature_id":33,"ability_id":30,"learn_level":1,"sort_order":5,"created_at":"2026-08-11T22:01:46.513Z","updated_at":"2026-08-11T22:01:46.513Z"}
