@@ -127,3 +127,30 @@ export const BatchCreatedResponseSchema = z
 export type CreateCreatureBody = z.infer<typeof CreateCreatureBodySchema>;
 export type UpdateCreatureBody = z.infer<typeof UpdateCreatureBodySchema>;
 export type BatchCreateCreaturesBody = z.infer<typeof BatchCreateCreaturesBodySchema>;
+
+// ---------------------------------------------------------------------------
+// sync-models — scans apps/web/public/models and reconciles modelUrl
+// ---------------------------------------------------------------------------
+
+const modelSyncEntrySchema = z.object({
+  code: z.string().openapi({ example: "CRT-001" }),
+  originalName: z.string().openapi({ example: "Trilobita" }),
+});
+
+export const SyncModelsResponseSchema = z
+  .object({
+    attached: z.array(modelSyncEntrySchema).openapi({
+      description: "Creatures whose modelUrl was set because a matching .glb file appeared",
+    }),
+    detached: z.array(modelSyncEntrySchema).openapi({
+      description: "Creatures whose modelUrl was cleared because the .glb file is gone",
+    }),
+    unchanged: z.number().int(),
+    version: z
+      .string()
+      .nullable()
+      .openapi({ description: "Changelog version if anything changed, else null" }),
+  })
+  .openapi("SyncModelsResponse");
+
+export type SyncModelsResult = z.infer<typeof SyncModelsResponseSchema>;

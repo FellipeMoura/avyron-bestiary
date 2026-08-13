@@ -56,7 +56,26 @@ export const BatchUpsertResponseSchema = z
   .object({ ids: z.array(z.number().int()), version: z.string() })
   .openapi("BatchUpsertCreatureAbilitiesResponse");
 
+/**
+ * Unlike `drops`/`map-biomes`, "does this creature know this move" has no
+ * value that means absence — upsert alone can add or relearn a move but
+ * can't retire one. A full moveset swap (e.g. changing a creature's
+ * element) needs to remove the old link, not just add the new one.
+ */
+export const DeleteCreatureAbilityBodySchema = z
+  .object({
+    creatureCode: z.string().openapi({ example: "CRT-001" }),
+    abilityCode: z.string().openapi({ example: "HAB-001" }),
+  })
+  .merge(changeMetadataSchema)
+  .openapi("DeleteCreatureAbilityBody");
+
+export const DeletedResponseSchema = z
+  .object({ id: z.number().int(), version: z.string() })
+  .openapi("DeletedCreatureAbilityResponse");
+
 export type UpsertCreatureAbilityBody = z.infer<typeof UpsertCreatureAbilityBodySchema>;
 export type BatchUpsertCreatureAbilitiesBody = z.infer<
   typeof BatchUpsertCreatureAbilitiesBodySchema
 >;
+export type DeleteCreatureAbilityBody = z.infer<typeof DeleteCreatureAbilityBodySchema>;

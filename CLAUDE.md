@@ -11,10 +11,10 @@ O jogo chama-se **Avyron**: Godot, câmera isométrica ortográfica travada em 3
 **Nomenclatura in-world.** As classes são Loricati, Theria e Draconis; as eras são Aetheris, Titanor e Novaterra. Esses são nomes de *exibição* — os códigos (`CLS-*`) e os enums do banco (`paleozoic`, `mesozoic`, `cenozoic`) seguem inalterados. O escopo biológico real de cada classe vive em `creature_classes.biologicalScope`, e as eras traduzem por `ERA_LABEL` em `labels.ts`. Ver documento `nomenclatura`.
 
 **Dois públicos com necessidades opostas:**
-- **Humanos leem** o bestiário, mapas, lore e histórico na UI. Frontend é 100% somente-leitura.
-- **Agentes de IA escrevem** via API. Não existe formulário de edição, painel admin ou login de usuário no frontend.
+- **Humanos leem** o bestiário, mapas, lore e histórico na UI. O frontend não tem formulário de edição, painel admin ou login de usuário — não existe CRUD genérico nem sessão de usuário.
+- **Agentes de IA escrevem** conteúdo via API.
 
-Essa separação é deliberada — sem CRUD na UI, sem sessão, sem edição concorrente no navegador.
+Isso não proíbe uma ação pontual e específica disparada por um botão no frontend (ex.: um botão que dispara uma sincronização já implementada na API) — o que se evita é construir telas de edição genéricas (CRUD, sessão, edição concorrente no navegador) sem necessidade real. Toda lógica de escrita, changelog e versão continua vivendo exclusivamente na API, nunca inline no frontend.
 
 ## Modelo de ameaça
 
@@ -43,7 +43,7 @@ Portas: web 5100, api 5101, postgres 5102.
 
 Estas quatro regras não têm exceção. Se algo parecer conflitar com elas, elas ganham.
 
-1. **Escrita só via API.** Frontend nunca envia `POST`/`PATCH`/`DELETE`.
+1. **Lógica de escrita só vive na API.** Toda transação, changelog e cálculo de versão fica em `apps/api` — nunca inline no frontend ou em script solto. O frontend não tem formulário de edição/CRUD genérico, mas pode disparar uma ação de escrita pontual e já implementada na API (ex.: um botão que chama um endpoint específico), com `x-api-key` de dev configurada via `VITE_API_KEY`.
 2. **Terminologia travada.** Termo oficial: **"Despertar Ancestral"** (transformação temporária, retorno à forma base). Os termos **"Evolução"** e **"Forma Ancestral"** estão descontinuados. Middleware `rejectForbiddenTerms` scaneia todo body de escrita e retorna `422` se achar essas expressões em qualquer campo de texto, apontando o campo ofensor. Ver `apps/api/src/shared/services/terminology.ts`.
 3. **Toda escrita gera changelog na mesma transação.** Campos `reason` e `impact` são obrigatórios em todo body de POST/PATCH. O servidor grava a entrada de changelog e incrementa a versão (formato `0.NN`) sozinho — agente **nunca** escolhe a versão. Ver `apps/api/src/shared/services/changelog.ts`.
 4. **Economia de tokens é requisito funcional.** Quem consome a API é LLM pagando por token. `POST` responde só `{"code","version"}`. `GET` aceita `?fields=code,name`. Erros nomeiam campo e valores válidos: `"classCode: 'CLS-999' does not exist"`, não `"invalid"`.

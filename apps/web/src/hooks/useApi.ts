@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api/client";
 
 // ---------------------------------------------------------------------------
@@ -66,6 +66,27 @@ export function useCreature(code: string | undefined) {
       unwrap(
         await api.GET("/creatures/{code}", { params: { path: { code: code! } } }),
       ),
+  });
+}
+
+/**
+ * Dev-only write action (see CLAUDE.md, regra 1): varre
+ * `apps/web/public/models` no servidor e reconcilia `modelUrl` com o que
+ * existe em disco. A chave de API vem de `VITE_API_KEY`, presente só no
+ * `.env` local — nunca em build de produção.
+ */
+export function useSyncModels() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      unwrap(
+        await api.POST("/creatures/sync-models", {
+          headers: { "x-api-key": import.meta.env.VITE_API_KEY ?? "" },
+        }),
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["creatures"] });
+    },
   });
 }
 

@@ -1245,7 +1245,38 @@ export interface paths {
                 };
             };
         };
-        delete?: never;
+        /** Remove one creature-ability link (natural key: creature + ability) */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DeleteCreatureAbilityBody"];
+                };
+            };
+            responses: {
+                /** @description Deleted */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DeletedCreatureAbilityResponse"];
+                    };
+                };
+                /** @description Creature does not know this ability */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -1969,6 +2000,42 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/creatures/sync-models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync creature modelUrl against apps/web/public/models */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Sync result */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SyncModelsResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/documents": {
@@ -3087,7 +3154,8 @@ export interface paths {
                     limit?: number;
                     offset?: number | null;
                     fields?: string;
-                    category?: "mineral" | "capture" | "heal";
+                    category?: "mineral" | "capture" | "heal" | "material";
+                    classCode?: string;
                 };
                 header?: never;
                 path?: never;
@@ -4070,6 +4138,512 @@ export interface paths {
         };
         trace?: never;
     };
+    "/progression-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the level-up constants (singleton)
+         * @description Subir de nível exige XP acumulado E material consumido. xpToNext(nível) = floor(xpCurveBase * nível ^ xpCurveExponent); xpGanho = floor(alvo.xpYield * nívelDoAlvo / xpYieldDivisor); custo(nível) = itemCostBase + floor(nível / itemCostLevelStep) unidades do item `category: material` da classe da própria criatura que sobe.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProgressionRule"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Tune one or more level-up constants */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateProgressionRulesBody"];
+                };
+            };
+            responses: {
+                /** @description Updated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UpdateProgressionRulesResponse"];
+                    };
+                };
+                /** @description Validation failed */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/relics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List relics */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    offset?: number | null;
+                    fields?: string;
+                    classCode?: string;
+                    elementCode?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Relic"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create relic */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateRelicBody"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CreatedRelicResponse"];
+                    };
+                };
+                /** @description Code already exists */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed or deprecated term */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/relics/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Batch create relics */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BatchCreateRelicsBody"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BatchCreatedRelicsResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/relics/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one by code */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    code: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The row */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Relic"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update relic */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    code: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateRelicBody"];
+                };
+            };
+            responses: {
+                /** @description Updated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UpdatedRelicResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed or deprecated term */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/relic-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List relic-stats */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    offset?: number | null;
+                    fields?: string;
+                    relicCode?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RelicStat"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Upsert relic-stats for one relic */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpsertRelicStatBody"];
+                };
+            };
+            responses: {
+                /** @description Upserted */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UpsertRelicStatResponse"];
+                    };
+                };
+                /** @description Validation failed or unknown code */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/relic-stats/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Batch upsert relic-stats */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BatchUpsertRelicStatsBody"];
+                };
+            };
+            responses: {
+                /** @description Upserted */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BatchUpsertRelicStatsResponse"];
+                    };
+                };
+                /** @description Validation failed or unknown code */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/relic-stats/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get by relic code */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    code: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The row */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RelicStat"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/relic-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the relic system constants (singleton) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RelicRule"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Tune one or more relic system constants */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateRelicRulesBody"];
+                };
+            };
+            responses: {
+                /** @description Updated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UpdateRelicRulesResponse"];
+                    };
+                };
+                /** @description Validation failed or inconsistent pair */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4669,6 +5243,26 @@ export interface components {
              */
             impact: string;
         };
+        DeletedCreatureAbilityResponse: {
+            id: number;
+            version: string;
+        };
+        DeleteCreatureAbilityBody: {
+            /** @example CRT-001 */
+            creatureCode: string;
+            /** @example HAB-001 */
+            abilityCode: string;
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
         /** @description Biological lineage. Classes do NOT influence combat — hard rule from Changelog 0.01. */
         CreatureClass: {
             id: number;
@@ -4765,6 +5359,7 @@ export interface components {
             baseSpeed: number;
             baseCharge: number;
             growthRate: number;
+            xpYield: number;
             sizeMeters: number;
             realSizeMeters: number | null;
             awakeningMultiplier: number;
@@ -4801,6 +5396,11 @@ export interface components {
                  * @example 0.03
                  */
                 growthRate?: number;
+                /**
+                 * @description Quanto esta espécie vale ao ser derrotada: floor(xpYield * nívelDoAlvo / progression_rules.xpYieldDivisor). Convenção do elenco: soma dos cinco stats base dividida por 5.
+                 * @example 62
+                 */
+                xpYield?: number;
                 /**
                  * @description Maior dimensão em unidades Godot, na escala dramatizada. Piso 0.9 (metade do jogador), teto 4.5 (2,5x). Ver o documento `escala-das-criaturas`.
                  * @example 2.69
@@ -4853,6 +5453,11 @@ export interface components {
              * @example 0.03
              */
             growthRate?: number;
+            /**
+             * @description Quanto esta espécie vale ao ser derrotada: floor(xpYield * nívelDoAlvo / progression_rules.xpYieldDivisor). Convenção do elenco: soma dos cinco stats base dividida por 5.
+             * @example 62
+             */
+            xpYield?: number;
             /**
              * @description Maior dimensão em unidades Godot, na escala dramatizada. Piso 0.9 (metade do jogador), teto 4.5 (2,5x). Ver o documento `escala-das-criaturas`.
              * @example 2.69
@@ -5009,6 +5614,25 @@ export interface components {
              * @example Habilita habilidades e criaturas de tipo Sombra
              */
             impact: string;
+        };
+        SyncModelsResponse: {
+            /** @description Creatures whose modelUrl was set because a matching .glb file appeared */
+            attached: {
+                /** @example CRT-001 */
+                code: string;
+                /** @example Trilobita */
+                originalName: string;
+            }[];
+            /** @description Creatures whose modelUrl was cleared because the .glb file is gone */
+            detached: {
+                /** @example CRT-001 */
+                code: string;
+                /** @example Trilobita */
+                originalName: string;
+            }[];
+            unchanged: number;
+            /** @description Changelog version if anything changed, else null */
+            version: string | null;
         };
         DesignDocument: {
             id: number;
@@ -5502,7 +6126,8 @@ export interface components {
             code: string;
             name: string;
             /** @enum {string} */
-            category: "mineral" | "capture" | "heal";
+            category: "mineral" | "capture" | "heal" | "material";
+            classId: number | null;
             effect: string | null;
             acquisition: string | null;
             notes: string | null;
@@ -5519,7 +6144,9 @@ export interface components {
                  * @example mineral
                  * @enum {string}
                  */
-                category?: "mineral" | "capture" | "heal";
+                category?: "mineral" | "capture" | "heal" | "material";
+                /** @example CLS-003 */
+                classCode?: string | null;
                 effect?: string | null;
                 acquisition?: string | null;
                 notes?: string | null;
@@ -5542,7 +6169,9 @@ export interface components {
              * @example mineral
              * @enum {string}
              */
-            category?: "mineral" | "capture" | "heal";
+            category?: "mineral" | "capture" | "heal" | "material";
+            /** @example CLS-003 */
+            classCode?: string | null;
             effect?: string | null;
             acquisition?: string | null;
             notes?: string | null;
@@ -5564,7 +6193,9 @@ export interface components {
              * @example mineral
              * @enum {string}
              */
-            category?: "mineral" | "capture" | "heal";
+            category?: "mineral" | "capture" | "heal" | "material";
+            /** @example CLS-003 */
+            classCode?: string | null;
             effect?: string | null;
             acquisition?: string | null;
             notes?: string | null;
@@ -5936,6 +6567,352 @@ export interface components {
              * @enum {string}
              */
             role?: "merchant" | "duelist" | "quest" | "flavor";
+            notes?: string | null;
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        ProgressionRule: {
+            id: number;
+            xpCurveBase: number;
+            xpCurveExponent: number;
+            xpYieldDivisor: number;
+            itemCostBase: number;
+            itemCostLevelStep: number;
+            notes: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        UpdateProgressionRulesResponse: {
+            version: string;
+        };
+        UpdateProgressionRulesBody: {
+            /**
+             * @description Escala da curva: xpToNext(nível) = floor(xpCurveBase * nível ^ xpCurveExponent).
+             * @example 14
+             */
+            xpCurveBase?: number;
+            /**
+             * @description Inclinação da curva. 1.0 é linear; acima disso o fim da subida pesa mais.
+             * @example 1.7
+             */
+            xpCurveExponent?: number;
+            /**
+             * @description Divisor do XP concedido por derrota. Maior deixa a subida mais lenta.
+             * @example 5
+             */
+            xpYieldDivisor?: number;
+            /**
+             * @description Unidades de material exigidas já no primeiro nível.
+             * @example 1
+             */
+            itemCostBase?: number;
+            /**
+             * @description A cada quantos níveis o custo de material sobe em uma unidade.
+             * @example 20
+             */
+            itemCostLevelStep?: number;
+            notes?: string | null;
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        Relic: {
+            id: number;
+            /** @example RLC-001 */
+            code: string;
+            name: string;
+            elementId: number | null;
+            classId: number | null;
+            notes: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        BatchCreatedRelicsResponse: {
+            codes: string[];
+            version: string;
+        };
+        BatchCreateRelicsBody: {
+            items: {
+                /** @example RLC-001 */
+                code: string;
+                /** @example Relicário de Água — Loricati */
+                name: string;
+                /**
+                 * @description Reference by element code — resolved server-side to elementId. Fixed per model. Null/absent = no elemental affinity.
+                 * @example ELE-002
+                 */
+                elementCode?: string | null;
+                /**
+                 * @description Reference by class code — resolved server-side to classId. Fixed per model. Null/absent = no class affinity.
+                 * @example CLS-001
+                 */
+                classCode?: string | null;
+                notes?: string | null;
+            }[];
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        CreatedRelicResponse: {
+            code: string;
+            version: string;
+        };
+        CreateRelicBody: {
+            /** @example RLC-001 */
+            code: string;
+            /** @example Relicário de Água — Loricati */
+            name: string;
+            /**
+             * @description Reference by element code — resolved server-side to elementId. Fixed per model. Null/absent = no elemental affinity.
+             * @example ELE-002
+             */
+            elementCode?: string | null;
+            /**
+             * @description Reference by class code — resolved server-side to classId. Fixed per model. Null/absent = no class affinity.
+             * @example CLS-001
+             */
+            classCode?: string | null;
+            notes?: string | null;
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        UpdatedRelicResponse: {
+            code: string;
+            version: string;
+        };
+        UpdateRelicBody: {
+            /** @example RLC-001 */
+            code?: string;
+            /** @example Relicário de Água — Loricati */
+            name?: string;
+            /**
+             * @description Reference by element code — resolved server-side to elementId. Fixed per model. Null/absent = no elemental affinity.
+             * @example ELE-002
+             */
+            elementCode?: string | null;
+            /**
+             * @description Reference by class code — resolved server-side to classId. Fixed per model. Null/absent = no class affinity.
+             * @example CLS-001
+             */
+            classCode?: string | null;
+            notes?: string | null;
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        RelicStat: {
+            id: number;
+            relicId: number;
+            slotCapacity: number;
+            baseCaptureRate: number;
+            captureRatePerLevel: number;
+            maxLevel: number;
+            combatBuffBase: number;
+            combatBuffPerLevel: number;
+            notes: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        BatchUpsertRelicStatsResponse: {
+            codes: string[];
+            version: string;
+        };
+        BatchUpsertRelicStatsBody: {
+            items: {
+                /** @example RLC-001 */
+                relicCode: string;
+                /**
+                 * @description Criaturas que o player carrega no mapa simultaneamente com este modelo equipado.
+                 * @example 3
+                 */
+                slotCapacity: number;
+                /**
+                 * @description Taxa de captura do relicário no nível 1. Numerador de base% na fórmula de captura.
+                 * @example 80
+                 */
+                baseCaptureRate: number;
+                /**
+                 * @description Incremento da taxa de captura por nível acima de 1.
+                 * @example 4
+                 */
+                captureRatePerLevel: number;
+                /** @example 30 */
+                maxLevel?: number;
+                /**
+                 * @description Placeholder — magnitude do buff de combate no nível 1, não-final.
+                 * @example 5
+                 */
+                combatBuffBase?: number;
+                /**
+                 * @description Placeholder — incremento do buff de combate por nível, não-final.
+                 * @example 0.3
+                 */
+                combatBuffPerLevel?: number;
+                notes?: string | null;
+            }[];
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        UpsertRelicStatResponse: {
+            code: string;
+            version: string;
+        };
+        UpsertRelicStatBody: {
+            /** @example RLC-001 */
+            relicCode: string;
+            /**
+             * @description Criaturas que o player carrega no mapa simultaneamente com este modelo equipado.
+             * @example 3
+             */
+            slotCapacity: number;
+            /**
+             * @description Taxa de captura do relicário no nível 1. Numerador de base% na fórmula de captura.
+             * @example 80
+             */
+            baseCaptureRate: number;
+            /**
+             * @description Incremento da taxa de captura por nível acima de 1.
+             * @example 4
+             */
+            captureRatePerLevel: number;
+            /** @example 30 */
+            maxLevel?: number;
+            /**
+             * @description Placeholder — magnitude do buff de combate no nível 1, não-final.
+             * @example 5
+             */
+            combatBuffBase?: number;
+            /**
+             * @description Placeholder — incremento do buff de combate por nível, não-final.
+             * @example 0.3
+             */
+            combatBuffPerLevel?: number;
+            notes?: string | null;
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        RelicRule: {
+            id: number;
+            captureFloorPct: number;
+            captureCeilPct: number;
+            sameElementBonusPct: number;
+            sameClassBonusPct: number;
+            elementDisadvantagePenaltyPct: number;
+            xpPerCapture: number;
+            xpCurveBase: number;
+            xpCurveExponent: number;
+            materialCostBase: number;
+            materialCostLevelStep: number;
+            notes: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        UpdateRelicRulesResponse: {
+            version: string;
+        };
+        UpdateRelicRulesBody: {
+            /**
+             * @description Piso de final% na fórmula de captura do relicário.
+             * @example 5
+             */
+            captureFloorPct?: number;
+            /** @example 95 */
+            captureCeilPct?: number;
+            /**
+             * @description Somado a base% quando o elemento do relicário bate com o da criatura.
+             * @example 15
+             */
+            sameElementBonusPct?: number;
+            /**
+             * @description Somado a base% quando a classe do relicário bate com a da criatura.
+             * @example 10
+             */
+            sameClassBonusPct?: number;
+            /**
+             * @description Subtraído de base% quando o elemento do relicário está em desvantagem contra o da criatura (via /elemental-advantages). Armazenado positivo.
+             * @example 15
+             */
+            elementDisadvantagePenaltyPct?: number;
+            /**
+             * @description Placeholder — XP fixo ganho por captura bem-sucedida, não-final.
+             * @example 20
+             */
+            xpPerCapture?: number;
+            /** @example 10 */
+            xpCurveBase?: number;
+            /** @example 1.5 */
+            xpCurveExponent?: number;
+            /**
+             * @description Unidades do material de classe exigidas já no nível 1 do relicário.
+             * @example 1
+             */
+            materialCostBase?: number;
+            /**
+             * @description A cada quantos níveis o custo de material sobe uma unidade.
+             * @example 20
+             */
+            materialCostLevelStep?: number;
             notes?: string | null;
             /**
              * @description Por que a mudança está sendo feita. Vai para o changelog.

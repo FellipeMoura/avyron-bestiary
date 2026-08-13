@@ -50,4 +50,9 @@ export const creaturesController = {
     );
     res.status(200).json(result);
   }) satisfies RequestHandler,
+
+  syncModels: (async (_req, res) => {
+    const result = await creaturesService.syncModels();
+    res.status(200).json(result);
+  }) satisfies RequestHandler,
 };

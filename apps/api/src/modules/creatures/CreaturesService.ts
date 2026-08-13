@@ -1,13 +1,16 @@
+import { readdirSync } from "node:fs";
 import { and, asc, eq } from "drizzle-orm";
 import { db, schema } from "@bestiary/db";
 import type { Database } from "@bestiary/db";
 import { AppError } from "../../shared/AppError";
+import { MODELS_DIR, MODELS_PUBLIC_PREFIX } from "../../shared/modelsDir";
 import { recordChange } from "../../shared/services/changelog";
 import { buildProjection, parseFields } from "../../shared/services/query";
 import {
   CREATURE_FIELDS,
   type BatchCreateCreaturesBody,
   type CreateCreatureBody,
+  type SyncModelsResult,
   type UpdateCreatureBody,
 } from "./CreaturesTypes";
 
@@ -198,6 +201,70 @@ export const creaturesService = {
       });
       return { codes, version };
     });
+  },
+
+  /**
+   * Matches `CRT-XXX.glb` files present in `apps/web/public/models` against
+   * creature codes, exact filename-to-code match (no version suffix — see
+   * CLAUDE.md). Sets `modelUrl` where a file appears, clears it back to
+   * `null` where a previously-set file has disappeared. A missing directory
+   * is treated as "no files found" rather than an error, so a fresh clone
+   * without models yet doesn't blow up the sync.
+   */
+  async syncModels(): Promise<SyncModelsResult> {
+    let entries: string[] = [];
+    try {
+      entries = readdirSync(MODELS_DIR);
+    } catch {
+      entries = [];
+    }
+    const present = new Set(
+      entries.filter((f) => f.toLowerCase().endsWith(".glb")).map((f) => f.slice(0, -4)),
+    );
+
+    const rows = await db
+      .select({
+        id: schema.creatures.id,
+        code: schema.creatures.code,
+        originalName: schema.creatures.originalName,
+        modelUrl: schema.creatures.modelUrl,
+      })
+      .from(schema.creatures)
+      .orderBy(asc(schema.creatures.code));
+
+    const attached: SyncModelsResult["attached"] = [];
+    const detached: SyncModelsResult["detached"] = [];
+    const updates: { id: number; modelUrl: string | null }[] = [];
+
+    for (const row of rows) {
+      const expected = present.has(row.code) ? `${MODELS_PUBLIC_PREFIX}/${row.code}.glb` : null;
+      if (row.modelUrl === expected) continue;
+      updates.push({ id: row.id, modelUrl: expected });
+      const entry = { code: row.code, originalName: row.originalName };
+      if (expected) attached.push(entry);
+      else detached.push(entry);
+    }
+
+    if (updates.length === 0) {
+      return { attached, detached, unchanged: rows.length, version: null };
+    }
+
+    const version = await db.transaction(async (tx) => {
+      for (const u of updates) {
+        await tx
+          .update(schema.creatures)
+          .set({ modelUrl: u.modelUrl, updatedAt: new Date() })
+          .where(eq(schema.creatures.id, u.id));
+      }
+      return recordChange(tx, {
+        change: `Model sync: ${attached.length} attached, ${detached.length} detached`,
+        reason: `Varredura de ${MODELS_DIR} disparada manualmente pelo botão de sincronização`,
+        impact: "Ficha(s) de criatura passam a exibir (ou deixam de exibir) o modelo 3D correspondente",
+        entity: "creatures",
+      });
+    });
+
+    return { attached, detached, unchanged: rows.length - updates.length, version };
   },
 };
 

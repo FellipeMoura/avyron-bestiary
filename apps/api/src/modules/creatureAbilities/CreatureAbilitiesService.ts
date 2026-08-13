@@ -1,12 +1,14 @@
 import { and, asc, eq } from "drizzle-orm";
 import { db, schema } from "@bestiary/db";
 import type { Database } from "@bestiary/db";
+import { AppError } from "../../shared/AppError";
 import { recordChange } from "../../shared/services/changelog";
 import { resolveCodeInTx, resolveOptionalCode } from "../../shared/services/fkResolver";
 import { buildProjection, parseFields } from "../../shared/services/query";
 import { CREATURE_ABILITY_FIELDS } from "./CreatureAbilitiesTypes";
 import type {
   BatchUpsertCreatureAbilitiesBody,
+  DeleteCreatureAbilityBody,
   UpsertCreatureAbilityBody,
 } from "./CreatureAbilitiesTypes";
 
@@ -121,6 +123,41 @@ export const creatureAbilitiesService = {
         entity: "creature_abilities",
       });
       return { ids, version };
+    });
+  },
+
+  async remove(body: DeleteCreatureAbilityBody) {
+    return db.transaction(async (tx) => {
+      const [creatureId, abilityId] = await Promise.all([
+        resolveCodeInTx(tx, schema.creatures, body.creatureCode, "creatureCode"),
+        resolveCodeInTx(tx, schema.abilities, body.abilityCode, "abilityCode"),
+      ]);
+      const existing = await tx
+        .select({ id: schema.creatureAbilities.id })
+        .from(schema.creatureAbilities)
+        .where(
+          and(
+            eq(schema.creatureAbilities.creatureId, creatureId),
+            eq(schema.creatureAbilities.abilityId, abilityId),
+          ),
+        )
+        .limit(1);
+      const row = existing[0];
+      if (!row) {
+        throw new AppError(
+          `Creature '${body.creatureCode}' does not know ability '${body.abilityCode}'`,
+          404,
+        );
+      }
+      const version = await recordChange(tx, {
+        change: `Creature ${body.creatureCode} unlearns ${body.abilityCode}`,
+        reason: body.reason,
+        impact: body.impact,
+        entity: "creature_abilities",
+        entityId: row.id,
+      });
+      await tx.delete(schema.creatureAbilities).where(eq(schema.creatureAbilities.id, row.id));
+      return { id: row.id, version };
     });
   },
 };

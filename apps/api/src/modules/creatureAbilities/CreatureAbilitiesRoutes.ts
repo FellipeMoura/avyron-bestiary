@@ -10,6 +10,8 @@ import {
   BatchUpsertCreatureAbilitiesBodySchema,
   BatchUpsertResponseSchema,
   CreatureAbilitySchema,
+  DeleteCreatureAbilityBodySchema,
+  DeletedResponseSchema,
   ListCreatureAbilitiesQuerySchema,
   UpsertCreatureAbilityBodySchema,
   UpsertResponseSchema,
@@ -91,4 +93,32 @@ creatureAbilitiesRouter.post(
   rejectForbiddenTerms,
   validateBody(UpsertCreatureAbilityBodySchema),
   creatureAbilitiesController.upsert,
+);
+
+registry.registerPath({
+  method: "delete",
+  path: "/creature-abilities",
+  tags: [TAG],
+  security: [{ ApiKey: [] }],
+  summary: "Remove one creature-ability link (natural key: creature + ability)",
+  request: {
+    body: {
+      content: { "application/json": { schema: DeleteCreatureAbilityBodySchema } },
+      required: true,
+    },
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: DeletedResponseSchema } },
+      description: "Deleted",
+    },
+    404: { description: "Creature does not know this ability" },
+  },
+});
+creatureAbilitiesRouter.delete(
+  "/",
+  writeLimiter,
+  requireApiKey,
+  validateBody(DeleteCreatureAbilityBodySchema),
+  creatureAbilitiesController.delete,
 );

@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Filter } from "../components/Filter";
-import { useCreatureClasses, useCreatures, useElements, useMaps } from "../hooks/useApi";
+import {
+  useCreatureClasses,
+  useCreatures,
+  useElements,
+  useMaps,
+  useSyncModels,
+} from "../hooks/useApi";
 import { cn } from "../lib/cn";
 import { ERA_LABEL, plural } from "../lib/labels";
 
@@ -15,6 +21,8 @@ const ERAS = [
 export function Bestiary() {
   const [params, setParams] = useSearchParams();
   const [copied, setCopied] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const syncModels = useSyncModels();
   const era = params.get("era") ?? "";
   const classCode = params.get("classCode") ?? "";
   const elementCode = params.get("elementCode") ?? "";
@@ -40,6 +48,23 @@ export function Bestiary() {
     await navigator.clipboard.writeText(JSON.stringify(creatures.data, null, 2));
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  };
+
+  const runSyncModels = async () => {
+    try {
+      const result = await syncModels.mutateAsync();
+      const parts: string[] = [];
+      if (result.attached.length) {
+        parts.push(`+${result.attached.map((c) => c.code).join(", ")}`);
+      }
+      if (result.detached.length) {
+        parts.push(`−${result.detached.map((c) => c.code).join(", ")}`);
+      }
+      setSyncMessage(parts.length ? parts.join(" · ") : "nenhuma mudança");
+    } catch {
+      setSyncMessage("erro ao sincronizar");
+    }
+    setTimeout(() => setSyncMessage(null), 6000);
   };
 
   const classByCode = new Map(classes.data?.map((c) => [c.id, c.code]) ?? []);
@@ -98,18 +123,40 @@ export function Bestiary() {
             })),
           ]}
         />
-        <button
-          type="button"
-          onClick={copyJson}
-          disabled={!creatures.data}
-          className={cn(
-            "ml-auto border border-graphite/60 px-2 py-1.5 font-mono text-micro uppercase tracking-widest",
-            "text-graphite transition-colors hover:border-bone hover:text-bone",
-            "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-graphite/60 disabled:hover:text-graphite",
+        <div className="ml-auto flex items-center gap-3">
+          {syncMessage && (
+            <span className="max-w-xs truncate font-mono text-micro text-graphite" title={syncMessage}>
+              {syncMessage}
+            </span>
           )}
-        >
-          {copied ? "copiado" : "copiar json"}
-        </button>
+          {import.meta.env.DEV && (
+            <button
+              type="button"
+              onClick={runSyncModels}
+              disabled={syncModels.isPending}
+              title="Varre apps/web/public/models e atualiza modelUrl de cada criatura (dev only)"
+              className={cn(
+                "border border-graphite/60 px-2 py-1.5 font-mono text-micro uppercase tracking-widest",
+                "text-graphite transition-colors hover:border-bone hover:text-bone",
+                "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-graphite/60 disabled:hover:text-graphite",
+              )}
+            >
+              {syncModels.isPending ? "sincronizando…" : "sincronizar modelos"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={copyJson}
+            disabled={!creatures.data}
+            className={cn(
+              "border border-graphite/60 px-2 py-1.5 font-mono text-micro uppercase tracking-widest",
+              "text-graphite transition-colors hover:border-bone hover:text-bone",
+              "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-graphite/60 disabled:hover:text-graphite",
+            )}
+          >
+            {copied ? "copiado" : "copiar json"}
+          </button>
+        </div>
       </section>
 
       {creatures.isLoading && <p className="font-mono text-xs text-graphite">carregando…</p>}
