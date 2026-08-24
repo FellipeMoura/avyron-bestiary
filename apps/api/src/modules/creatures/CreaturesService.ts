@@ -210,6 +210,12 @@ export const creaturesService = {
    * `null` where a previously-set file has disappeared. A missing directory
    * is treated as "no files found" rather than an error, so a fresh clone
    * without models yet doesn't blow up the sync.
+   *
+   * The sync only manages URLs under its own convention. A `modelUrl`
+   * pointing anywhere else (e.g. `/models/placeholders/big/Orc.glb`, shared
+   * by several creatures and set via PATCH) is left alone — except when a
+   * definitive `CRT-XXX.glb` appears for that creature, which always wins
+   * over a placeholder.
    */
   async syncModels(): Promise<SyncModelsResult> {
     let entries: string[] = [];
@@ -236,8 +242,13 @@ export const creaturesService = {
     const detached: SyncModelsResult["detached"] = [];
     const updates: { id: number; modelUrl: string | null }[] = [];
 
+    const conventional = new RegExp(`^${MODELS_PUBLIC_PREFIX}/CRT-\\d+\\.glb$`);
+
     for (const row of rows) {
       const expected = present.has(row.code) ? `${MODELS_PUBLIC_PREFIX}/${row.code}.glb` : null;
+      // No conventional file for this creature and the current URL is not
+      // ours to manage (placeholder set via PATCH): leave it untouched.
+      if (expected === null && row.modelUrl !== null && !conventional.test(row.modelUrl)) continue;
       if (row.modelUrl === expected) continue;
       updates.push({ id: row.id, modelUrl: expected });
       const entry = { code: row.code, originalName: row.originalName };

@@ -145,13 +145,15 @@ pnpm db:dump              # grava packages/db/snapshot/ — rode depois de toda 
 pnpm db:restore           # migrations + snapshot; hidrata uma maquina do zero
 pnpm db:studio            # drizzle-kit GUI para inspecionar
 pnpm openapi:generate     # regera schema.d.ts do web a partir da API rodando
-pnpm game:export          # gera o bundle JSON no repo Godot irmão
+pnpm game:export          # gera o bundle JSON e espelha os .glb vinculados no repo Godot irmão
 pnpm models:optimize      # comprime .glb novo para KTX2 — rode ao adicionar modelo
+pnpm models:placeholders  # converte placeholder_models/ (glTF) em .glb com clipes normalizados
+pnpm models:biomes        # prepara o kit de props de bioma (texturas 1024², gltf compartilhado)
 pnpm db:seed              # CONGELADO — bootstrap offline, não usar para conteúdo novo
 pnpm db:reset             # create + generate + migrate + seed (setup do zero, sem dados de prod)
 ```
 
-`pnpm game:export` aceita `--from <url>` (default API local) e `--out <path>` (default `../godot`). Ele **falha** se alguma criatura estiver sem stats, sem regra de captura ou sem golpes — em vez de gerar um bundle que quebra o jogo em runtime.
+`pnpm game:export` aceita `--from <url>` (default API local) e `--out <path>` (default `../avyron`). Ele **falha** se alguma criatura estiver sem stats, sem regra de captura ou sem golpes — em vez de gerar um bundle que quebra o jogo em runtime. Além do `data/bestiary.json`, ele espelha todo `.glb` referenciado por `modelUrl` em `<repo-godot>/models/`, preservando o caminho da URL (o jogo lê `res://models/...`); `modelUrl` apontando para arquivo inexistente também aborta o export. Os props de bioma (`apps/web/public/models/biomes/`, gerados por `pnpm models:biomes`) são espelhados por diretório inteiro — nenhuma criatura os referencia; quem os consome é a cena do mapa. Eles ficam como `.gltf` + texturas compartilhadas de propósito: empacotar em `.glb` embutiria uma cópia privada da textura da casca em cada árvore.
 
 ## Coisas para NÃO fazer
 
@@ -165,6 +167,7 @@ pnpm db:reset             # create + generate + migrate + seed (setup do zero, s
 - Não usar shadcn/ui. Componentes trazem radius e paleta que brigam com a direção visual — mais retrabalho refinar do que HTML nativo + Tailwind.
 - Não instalar Alembic, Prisma, tRPC, GraphQL, MinIO, Redis, Docker Compose. Se propuser algo que puxe uma dessas, questionar antes.
 - **Não presumir sufixo `.vN` em nome de modelo.** A convenção mudou: os arquivos são `CRT-XXX.glb`, sem versão no nome. Quem escrever seletor de modelo deve casar `CRT-XXX.glb` puro — foi assim que o antigo `publish-models.mjs` virou no-op silencioso, imprimindo "nothing to do" e saindo com sucesso.
+- **`modelUrl` é N:1 com placeholders compartilhados.** Enquanto não existem modelos definitivos animados, várias criaturas apontam para o mesmo `.glb` em `apps/web/public/models/placeholders/<grupo>/` (gerados de `placeholder_models/` por `pnpm models:placeholders`, packs CC0 do Quaternius; o script também emite o `manifest.json` que o seletor do frontend lê). O vínculo se faz pelo botão **"vincular/alterar modelo"** na ficha da criatura (dev only — PATCH normal da API, changelog e versão automáticos), que mostra em cada opção 3D quais criaturas já a usam. O `syncModels` só gerencia URLs no padrão `/models/CRT-XXX.glb`: um arquivo definitivo que aparecer ganha do placeholder, mas ponteiro de placeholder nunca é apagado pela varredura — "nenhuma mudança" no botão de sincronizar é o estado normal com placeholders vinculados. Os clipes de animação são normalizados na conversão para um vocabulário único (`Idle`, `Walk`, `Run`, `Attack`, `Attack2`, `HitReact`, `Death`…) — o jogo e o viewer nunca veem os nomes originais dos packs, e o viewer da ficha toca o `Idle` em loop.
 - **Não criar script que escreva em host remoto.** O escopo é estritamente a máquina local: API em `localhost:5101`, Postgres no container da 5102, durável em `packages/db/snapshot/`. `publish-models.mjs` e `migrate-docs-to-prod.mjs` foram removidos por apontarem para o `bestiary.sysnode.com.br` desligado. A receita de religar o VPS continua em [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) e [docs/VPS_RUNBOOK.md](docs/VPS_RUNBOOK.md) — é referência histórica, não caminho de trabalho.
 - **Não servir `.glb` do Meshy sem passar por `pnpm models:optimize`.** O arquivo cru custa ~89 MB de VRAM por criatura, e o `KHR_texture_basisu` que o script marca como obrigatório é o que o `CreatureViewer` espera. Ver [docs/MODEL_OPTIMIZATION.md](docs/MODEL_OPTIMIZATION.md).
 - **Não medir otimização de modelo por MB do arquivo.** Foi assim que a redução de 4k para 2k de textura pareceu não ter feito nada: ela economizou ~270 MB de VRAM por criatura sem mexer visivelmente no `.glb`, porque JPEG só comprime em disco — a GPU decodifica tudo para RGBA cru. Arquivo governa download; resolução e formato de textura governam VRAM. São dois problemas separados. A geometria é ~2% do arquivo, então mexer em contagem de polígonos não resolve nenhum dos dois.
@@ -188,7 +191,8 @@ pnpm db:reset             # create + generate + migrate + seed (setup do zero, s
 - **`apps/api/src/modules/creatures/`** — módulo de referência para o padrão com múltiplas FKs
 - **`apps/api/src/modules/drops/`** — padrão upsert para junctions
 - **`apps/api/src/modules/creatureStats/`** — padrão filho-1:1-por-código-do-pai
-- **`scripts/export-game-data.mjs`** — o contrato de dados com o jogo
+- **`scripts/export-game-data.mjs`** — o contrato de dados com o jogo (bundle + espelhamento dos `.glb`)
+- **`scripts/convert-placeholders.mjs`** — placeholders glTF → `.glb`, normalização dos clipes e `manifest.json`
 - **`apps/web/src/routes/CreatureDetail.tsx`** — a única tela com peso visual; referência da direção editorial
 - **`apps/web/src/lib/labels.ts`** — todas as traduções enum → português
 - **`fontes/README.md`** — o que vai na pasta ignorada

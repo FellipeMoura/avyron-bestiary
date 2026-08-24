@@ -1,5 +1,5 @@
 {
-  "version": "0.219",
+  "version": "0.224",
   "tables": {
     "elements": 6,
     "creature_classes": 3,
@@ -7,7 +7,7 @@
     "game_maps": 3,
     "items": 18,
     "design_documents": 34,
-    "changelog": 219,
+    "changelog": 224,
     "elemental_advantages": 12,
     "map_biomes": 13,
     "npcs": 2,

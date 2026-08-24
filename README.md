@@ -130,20 +130,30 @@ Cada recurso normal expõe: `GET /` (com filtros + `?fields=` + paginação), `G
 ## Export para o jogo
 
 ```powershell
-pnpm game:export                          # da API local para ../godot
-pnpm game:export --out ../avyron          # destino explícito
+pnpm game:export                          # da API local para ../avyron
+pnpm game:export --out <path>             # destino explícito
 ```
 
 Gera `data/bestiary.json` no repo do Godot: um bundle com `dataVersion` (tirado do changelog), tudo endereçado por código — nenhum id numérico atravessa a fronteira. Build-time, não runtime: o jogo abre offline e cada build é rastreável até o estado exato do catálogo.
 
-O export **aborta sem escrever nada** se alguma criatura estiver sem stats, sem regra de captura ou sem golpes.
+Junto com o bundle, o export **espelha em `<repo-godot>/models/` todo `.glb` referenciado por `modelUrl`** (deduplicado — placeholders compartilhados por várias criaturas são copiados uma vez), preservando o caminho da URL para o jogo resolver como `res://models/...`.
+
+O export **aborta sem escrever nada** se alguma criatura estiver sem stats, sem regra de captura, sem golpes — ou com `modelUrl` apontando para arquivo que não existe.
+
+## Modelos 3D placeholder
+
+Enquanto os modelos definitivos não são animados, o elenco usa os packs CC0 do Quaternius em `placeholder_models/` (fontes `.blend` + glTF). `pnpm models:placeholders` os converte em `.glb` servíveis em `apps/web/public/models/placeholders/<grupo>/`, normalizando os clipes de animação para um vocabulário único (`Idle`, `Walk`, `Run`, `Attack`, `Attack2`, `HitReact`, `Death`…) e emitindo o `manifest.json` que a ficha lê.
+
+O vínculo criatura ↔ modelo é N:1 e se faz na própria ficha (`/bestiary/:code`), pelo botão **"vincular/alterar modelo"** (dev only): lista os modelos por família, mostra cada um em 3D animado e, abaixo, quais criaturas já usam aquele corpo. Confirmar dispara o PATCH normal da API — changelog e versão automáticos.
+
+**Props de bioma** seguem um pipeline paralelo: `pnpm models:biomes` prepara os packs de `placeholder_models/biomes/` para `apps/web/public/models/biomes/`. Dois lotes, dois tratamentos: o Stylized Nature MegaKit (Quaternius, CC0) vai para `megakit/` como `.gltf` com texturas reduzidas a 1024² e mantidas **compartilhadas** (empacotar em `.glb` duplicaria a textura da casca em cada árvore); os props aquáticos do Meshy (PZ-01) vão para `aquatic/` como `.glb` individuais — cada um tem textura própria — com o mesmo downscale e a checagem de emissivo do pipeline Meshy (remover textura emissiva exige zerar o `emissiveFactor`). Não há vínculo por criatura: o `game:export` espelha o diretório inteiro e a cena do mapa no Godot consome direto. O Kenney Nature Kit também está em `placeholder_models/biomes/` mas foi preterido: escala de miniatura (grade 1×1) e linguagem geométrica que briga com as criaturas.
 
 `GET /documents/{slug}` faz content negotiation: `Accept: text/markdown` devolve markdown puro (token cheap); JSON caso contrário.
 
 ## UI (5 telas)
 
 - `/bestiary` — lista com filtros era/classe/elemento sincronizados na URL
-- `/bestiary/:code` — a ficha, com hero number CRT-XXX + comparador base ↔ despertar lado a lado
+- `/bestiary/:code` — a ficha, com hero number CRT-XXX, viewer 3D em turntable (clipe `Idle` em loop, botão dev de vínculo de modelo) + comparador base ↔ despertar lado a lado
 - `/items` — catálogo editorial e camada de números lado a lado: preço, preço de revenda derivado do `sellRatio`, par `effectCode`/`effectValue` lido na unidade certa, oferta de comerciante e peso de mineração por classe e bioma. Fecha com a legenda do que cada campo decide no jogo
 - `/documents` + `/documents/:slug` — lista de capítulos com status colorido; reader com markdown renderizado
 - `/changelog` — timeline vertical, motivo/impacto em duas colunas

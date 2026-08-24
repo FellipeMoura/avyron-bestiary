@@ -18,8 +18,8 @@
  * The export FAILS on incomplete data rather than shipping it. A creature
  * without stats would be a creature the battle system divides by zero on.
  */
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -518,6 +518,64 @@ const bundle = {
 };
 
 // ---------------------------------------------------------------------------
+// models
+// ---------------------------------------------------------------------------
+
+/**
+ * The bundle carries `modelUrl` as a string, but the game can't fetch it —
+ * it must open offline, same reason the bundle exists at all. So the export
+ * mirrors every referenced .glb into `<godot>/models/`, preserving the URL
+ * path (`/models/placeholders/big/Orc.glb` → `models/placeholders/big/Orc.glb`,
+ * read by the game as `res://models/...`). Placeholders are N:1 — many
+ * creatures share one file — so the set is deduplicated first.
+ *
+ * A modelUrl pointing at a file that doesn't exist is a broken link the game
+ * would silently render as a capsule; it aborts the export like any other
+ * incomplete record.
+ */
+const WEB_MODELS_DIR = resolve(REPO_ROOT, "apps/web/public/models");
+const MODEL_URL_PREFIX = "/models/";
+
+const modelUrls = [...new Set(creatures.map((c) => c.modelUrl).filter(Boolean))];
+const modelCopies = [];
+for (const url of modelUrls) {
+  if (!url.startsWith(MODEL_URL_PREFIX)) {
+    problems.push(`modelUrl '${url}' does not start with ${MODEL_URL_PREFIX} — cannot be mirrored to the game repo`);
+    continue;
+  }
+  const rel = url.slice(MODEL_URL_PREFIX.length);
+  const src = resolve(WEB_MODELS_DIR, rel);
+  if (!existsSync(src)) {
+    problems.push(`modelUrl '${url}' points at a missing file (${src})`);
+    continue;
+  }
+  modelCopies.push({ src, dest: resolve(OUT_REPO, "models", rel) });
+}
+
+/**
+ * Props de bioma são espelhados por DIRETÓRIO, não por referência: nenhuma
+ * criatura aponta para eles, quem os consome é a cena do mapa no Godot. Vai
+ * tudo que `pnpm models:biomes` gerou — .gltf, .bin e as texturas
+ * compartilhadas, que precisam viajar juntas para as URIs relativas
+ * continuarem válidas.
+ */
+const BIOMES_DIR = resolve(WEB_MODELS_DIR, "biomes");
+let biomeCopies = 0;
+function mirrorDir(srcDir, destDir) {
+  for (const entry of readdirSync(srcDir, { withFileTypes: true })) {
+    const src = join(srcDir, entry.name);
+    const dest = join(destDir, entry.name);
+    if (entry.isDirectory()) {
+      mirrorDir(src, dest);
+    } else {
+      mkdirSync(destDir, { recursive: true });
+      copyFileSync(src, dest);
+      biomeCopies += 1;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // write
 // ---------------------------------------------------------------------------
 
@@ -531,9 +589,20 @@ if (problems.length > 0) {
 mkdirSync(dirname(OUT_FILE), { recursive: true });
 writeFileSync(OUT_FILE, `${JSON.stringify(bundle, null, 2)}\n`, "utf8");
 
+for (const { src, dest } of modelCopies) {
+  mkdirSync(dirname(dest), { recursive: true });
+  copyFileSync(src, dest);
+}
+
+if (existsSync(BIOMES_DIR)) {
+  mirrorDir(BIOMES_DIR, resolve(OUT_REPO, "models/biomes"));
+}
+
 const kb = (Buffer.byteLength(JSON.stringify(bundle)) / 1024).toFixed(1);
 console.log(`dataVersion: ${bundle.dataVersion}`);
 console.log(`written:     ${OUT_FILE} (${kb} KB)`);
+console.log(`models:      ${modelCopies.length} .glb mirrored to ${resolve(OUT_REPO, "models")}`);
+console.log(`biomes:      ${biomeCopies} files mirrored to ${resolve(OUT_REPO, "models/biomes")}`);
 console.log(
   `contents:    ${bundle.creatures.length} creatures, ${bundle.abilities.length} abilities, ` +
     `${bundle.elementalAdvantages.length} elemental pairs, ${bundle.classes.length} classes, ` +

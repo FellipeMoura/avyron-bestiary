@@ -1,5 +1,6 @@
 import { Link, useParams } from "react-router-dom";
 import { CreatureViewer } from "../components/CreatureViewer";
+import { ModelLinkDialog } from "../components/ModelLinkDialog";
 import {
   useAwakeningByCreature,
   useCreature,
@@ -75,6 +76,7 @@ export function CreatureDetail() {
       {/* 3D turntable — the only place camera rotation is allowed (see camera-e-perspectiva doc) */}
       <section className="mt-12">
         <CreatureViewer url={c.modelUrl} />
+        <ModelLinkDialog creatureCode={c.code} currentUrl={c.modelUrl} />
       </section>
 
       {/* comparator */}

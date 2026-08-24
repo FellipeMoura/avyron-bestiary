@@ -34,12 +34,13 @@ export const DOCUMENT_STATUS_LABEL: Record<"defined" | "partial" | "pending", st
   pending: "pendente",
 };
 
-export type ItemCategory = "mineral" | "capture" | "heal";
+export type ItemCategory = "mineral" | "capture" | "heal" | "material";
 
 export const ITEM_CATEGORY_LABEL: Record<ItemCategory, string> = {
   mineral: "mineral",
   capture: "captura",
   heal: "cura",
+  material: "material",
 };
 
 /**
@@ -53,6 +54,8 @@ export const ITEM_CATEGORY_ROLE: Record<ItemCategory, string> = {
   capture:
     "Consumível de captura. Multiplica a chance calculada a partir do catchRate da criatura, dentro dos limites de combat_rules.",
   heal: "Consumível de cura. Devolve vigor à criatura escolhida e concorre com a regeneração passiva de 10 %/min.",
+  material:
+    "Material de progressão: cai de criatura selvagem derrotada (a classe do derrotado decide qual) e é gasto, junto com XP, na subida de nível. Fica fora de mineral de propósito — nunca é sorteado ao minerar.",
 };
 
 export type ItemEffect = "none" | "capture_bonus" | "heal_flat" | "heal_percent";

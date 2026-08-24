@@ -4,6 +4,8 @@ Como preparar um `.glb` do Meshy antes de servir no bestiário, e por que o proc
 
 **Resumo operacional:** jogue o arquivo em `apps/web/public/models/` e rode `pnpm models:optimize`. O script é idempotente — pula o que já está otimizado e processa só o novo. O resto deste documento explica as decisões, para que ninguém as desfaça por engano.
 
+> **Placeholders não passam por aqui.** Os modelos em `apps/web/public/models/placeholders/` (packs CC0 do Quaternius, animados) são gerados por `pnpm models:placeholders` a partir de `placeholder_models/`, que converte glTF → `.glb`, normaliza os nomes dos clipes de animação para o vocabulário único e emite o `manifest.json` do seletor da ficha. KTX2 não compraria nada neles: a textura é um atlas de paleta de 9 KB (ou nenhuma). O `models:optimize` só varre a raiz de `models/`, então os dois pipelines não se tocam. Este documento segue valendo para os `.glb` do Meshy — que hoje estão fora do projeto por não terem animação, mas voltam por este mesmo caminho quando forem animados.
+
 ---
 
 ## A armadilha central: MB de arquivo não é o custo que importa
