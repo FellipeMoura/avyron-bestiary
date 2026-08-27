@@ -4,7 +4,7 @@ Guia operacional. Vale para agente e para humano.
 
 ## O princípio
 
-**A API é a única via de escrita.** Não existe formulário no frontend, e o `seed/` está congelado. Toda mudança carrega `reason` e `impact`, e o servidor grava a entrada de changelog e atribui a versão na mesma transação. O changelog é o registro — não um arquivo, não um commit.
+**A API é a única via de escrita.** O `seed/` está congelado, e o frontend não tem CRUD — a única tela de edição é `/elements`, que monta um `PATCH` da API como qualquer outro cliente (ver [Editar a paleta de um elemento](#editar-a-paleta-de-um-elemento)). Toda mudança carrega `reason` e `impact`, e o servidor grava a entrada de changelog e atribui a versão na mesma transação. O changelog é o registro — não um arquivo, não um commit.
 
 **Tudo roda local.** A API sobe com `pnpm dev`, o Postgres é o container da porta 5102, e o durável é o snapshot commitado no repositório.
 
@@ -159,7 +159,9 @@ $body = @{
 Invoke-RestMethod "$api/awakenings" -Method Post -Headers $h -Body $body
 ```
 
-**Vigie a proporção 70/30.** Hoje: 18 reforço / 8 troca (69% / 31%). Uma criatura já com Despertar responde 409 — é 1:1.
+**Vigie a proporção 70/30.** Hoje: 22 reforço / 9 troca (71% / 29%), cobertura 31/31. Uma criatura já com Despertar responde 409 — é 1:1.
+
+A cobertura é **meta**: o export avisa e escreve o bundle assim mesmo, e `test_data.gd` reporta sem reprovar. O que os dois **abortam/reprovam** é o caso vizinho — criatura sem Despertar que já conhece o golpe de assinatura (`awakeningOnly`), porque aí o golpe fica permanentemente bloqueado. Foi o que aconteceu com `CRT-013` até 2026-08: jogou com 5 golpes contra 6 do resto do elenco, e nenhum dos dois guardas apontava para isso. Ver [O que o export cobra](#o-que-o-export-cobra).
 
 O `awakeningMultiplier` em `creature_stats` deve acompanhar o tipo: **1.5** para reforço, **1.7** para troca.
 
@@ -283,6 +285,44 @@ cd ..\avyron
 & $godot --headless --script res://scripts/dev/balance_probe.gd -- 0.22 3 3.0
 ```
 
+## Editar a paleta de um elemento
+
+A paleta é o que o jogo usa para **recolorir os corpos placeholder** por elemento e para acender a aura do Despertar Ancestral. Cinco campos em `elements`:
+
+| campo | o que é |
+|---|---|
+| `paletteShadow` | onde cai o texel mais **escuro** do atlas do corpo |
+| `paletteMid` | o miolo — a cor que a criatura "é" |
+| `paletteHighlight` | onde cai o texel mais **claro** |
+| `paletteAura` | a aura do Despertar Ancestral |
+| `paletteSpread` | quanto cada criatura pode variar dentro da família, 0 a 0.5 |
+
+As três primeiras **não são três cores soltas**: são posições numa rampa que o jogo lê por luminância. É isso que faz "amarelo com preto" caber num elemento só — Eletricidade sai de quase-preto e chega em amarelo, e a forma do bicho distribui as duas pontas sozinha.
+
+**Prefira a tela.** `http://localhost:5100/elements` é a única tela de edição do app, e existe porque paleta não se autora às cegas: ela mostra a rampa e a aura contra os fundos reais do PZ-01 (água, névoa, costa seca) enquanto você escolhe. Uma criatura de Água azul num mapa azul com névoa azul é o modo de falha mais provável desta feature, e ele não aparece num swatch sobre branco. `reason`/`impact` continuam obrigatórios ali como em qualquer escrita.
+
+Pela API, quando for mais prático:
+
+```powershell
+$body = @{
+  paletteShadow    = "#08243B"
+  paletteMid       = "#2E7FA8"
+  paletteHighlight = "#9FE3F0"
+  paletteAura      = "#4FD2FF"
+  paletteSpread    = 0.18
+  reason = "Agua sumia contra a nevoa do PZ-01"
+  impact = "Contraste de valor em vez de matiz; corpo le de longe no bioma aquatico"
+} | ConvertTo-Json
+
+Invoke-RestMethod "$api/elements/ELE-002" -Method Patch -Headers $h -Body $body
+```
+
+Hex é `#RRGGBB`, seis dígitos — a forma de três é rejeitada de propósito, porque a tela usa um `input[type=color]` que só devolve seis e a expansão silenciosa gravaria um changelog de uma edição que ninguém fez.
+
+**`paletteAura` tem coluna própria, e não é o `paletteHighlight` reaproveitado.** A escolha óbvia é a errada: com o corpo já recolorido pelo elemento, uma aura na mesma cor some justamente na criatura em que ela deveria gritar. Autore mais clara que o brilho. Deixar `null` faz o jogo cair no highlight — funciona, com esse risco.
+
+**`paletteSpread` alto não é "mais variedade".** Ele desloca a posição na rampa, nunca o matiz, então nunca vaza para outro elemento; mas acima de ~0.25 uma criatura da família cai perto da sombra enquanto a vizinha cai perto do brilho, e as duas param de ler como parentes. O elenco hoje usa 0.12 a 0.22.
+
 ## Corrigir
 
 Depende da tabela.
@@ -296,7 +336,7 @@ Invoke-RestMethod "$api/creatures/CRT-028" -Method Patch -Headers $h -Body $body
 
 **`combat-rules`** — singleton, usa `PATCH` (ver acima).
 
-**Camada de números e junções** (`creature-stats`, `ability-stats`, `capture-rules`, `creature-abilities`, `drops`, `map-biomes`, `elemental-advantages`) — **não têm PATCH**. Re-POST com os valores novos; o upsert sobrescreve. Você pode mandar só o campo que mudou:
+**Camada de números e junções** (`creature-stats`, `ability-stats`, `capture-rules`, `creature-abilities`, `drops`, `map-biomes`, `elemental-advantages`, `merchant-offers`, `mining-rates`) — **não têm PATCH**. Re-POST com os valores novos; o upsert sobrescreve. Vale igual para o endpoint unitário e para o `/batch` — até 2026-08 três dos lotes sobrescreviam só na aparência, inseriam o que era novo e ignoravam em silêncio o que já existia, enquanto o changelog gravava uma versão dizendo que tinham atualizado. Se você suspeitar de um lote que "não pegou", releia o recurso antes de reescrever. Você pode mandar só o campo que mudou:
 
 ```powershell
 $body = @{ creatureCode="CRT-028"; baseAttack=55; reason="..."; impact="..." } | ConvertTo-Json
@@ -324,6 +364,37 @@ cd ..\avyron; git add data/bestiary.json; git commit -m "..."   # bundle version
 Dois commits de propósito, um em cada repositório: o snapshot é a verdade do catálogo, o bundle é o recorte que o jogo consome. Eles podem divergir de propósito — dá para escrever cinco criaturas e exportar só quando as cinco estiverem completas.
 
 O export **aborta sem escrever nada** e lista o que falta se alguma criatura estiver incompleta. Se ele reclamar, o dado está errado — não o script.
+
+## O que o export cobra
+
+`pnpm game:export` é o segundo guarda do catálogo — o primeiro é a validação da API, na hora da escrita. Ele **aborta sem escrever nada** e lista tudo o que falta; se ele reclamar, o dado está errado, não o script.
+
+**Aborta** — contradição de dado, o jogo consumiria algo quebrado:
+
+| | |
+|---|---|
+| criatura sem `creature_stats`, `capture_rules`, golpes ou `sizeMeters` | não dá pra instanciar nem lutar |
+| criatura sem Despertar que **conhece um golpe `awakeningOnly`** | o golpe aparece na ficha e é impossível de usar |
+| drop de `material` de classe diferente da criatura | quebra a ligação classe → material da progressão |
+| item com `effectCode` != `none` e `effectValue` zero | compra-se e não faz nada |
+| item não-mineral e não-material sem `value` | está à venda sem preço |
+| habilidade sem `ability_stats`, relic sem `relic_stats` | número que o jogo executa faltando |
+| NPC `merchant` sem `merchant_offers` | loja vazia é sempre erro de cadastro |
+| `modelUrl` fora de `/models/` ou apontando para arquivo inexistente | cápsula silenciosa no lugar do corpo |
+| elemento com paleta **pela metade** (alguma das três paradas faltando) | rampa incompleta não é rampa: o jogo teria de inventar a cor que falta |
+| parada de paleta que não seja `#RRGGBB` | a API valida na escrita, mas snapshot restaurado de outra máquina não passou por ela |
+| peça de `appearance` fora do manifest do kit de personagens | mesma política do `modelUrl` |
+| taxa de mineração apontando para item que **não é `mineral`** | o peso viaja em `mining.rates`, o item não entra em `mining.items`, e o número some na normalização |
+| classe com criatura no elenco sem `mining_rates` ou sem `workFunction` | o perfil de trabalho da classe vira decoração |
+
+**Avisa e escreve** — meta de conteúdo, não invariante:
+
+| | |
+|---|---|
+| criatura sem Despertar (cobertura 1:1) | ela ainda joga, só não usa o medidor de carga |
+| elemento **sem paleta nenhuma** | as criaturas dele saem no corpo neutro; o jogo roda |
+
+A divisão é deliberada e vale nos dois lados: `scripts/dev/test_data.gd`, no repo do jogo, usa exatamente os mesmos dois critérios — reprova no golpe inalcançável, avisa na cobertura. Suíte vermelha significa "quebrado"; alvo de conteúdo sai como aviso. Os dois guardas já discordaram: o export não olhava nenhuma dessas linhas, o teste reprovava na cobertura e não checava o golpe morto, e foi por essa fresta que `CRT-013` saiu num bundle jogando com 5 golpes contra 6 do resto do elenco.
 
 ## Erros comuns
 

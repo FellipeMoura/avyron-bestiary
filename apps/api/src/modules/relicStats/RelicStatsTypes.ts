@@ -9,8 +9,6 @@ export const RelicStatSchema = z
     baseCaptureRate: z.number().int(),
     captureRatePerLevel: z.number(),
     maxLevel: z.number().int(),
-    combatBuffBase: z.number(),
-    combatBuffPerLevel: z.number(),
     notes: z.string().nullable(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
@@ -24,8 +22,6 @@ export const RELIC_STAT_FIELDS = [
   "baseCaptureRate",
   "captureRatePerLevel",
   "maxLevel",
-  "combatBuffBase",
-  "combatBuffPerLevel",
   "notes",
   "createdAt",
   "updatedAt",
@@ -36,8 +32,6 @@ export const RELIC_STAT_PAYLOAD = [
   "baseCaptureRate",
   "captureRatePerLevel",
   "maxLevel",
-  "combatBuffBase",
-  "combatBuffPerLevel",
   "notes",
 ] as const;
 
@@ -65,14 +59,6 @@ const coreSchema = z.object({
     example: 4,
   }),
   maxLevel: z.number().int().min(1).max(999).optional().openapi({ example: 30 }),
-  combatBuffBase: z.number().min(0).max(100).optional().openapi({
-    description: "Placeholder — magnitude do buff de combate no nível 1, não-final.",
-    example: 5,
-  }),
-  combatBuffPerLevel: z.number().min(0).max(100).optional().openapi({
-    description: "Placeholder — incremento do buff de combate por nível, não-final.",
-    example: 0.3,
-  }),
   notes: z.string().max(500).nullish(),
 });
 

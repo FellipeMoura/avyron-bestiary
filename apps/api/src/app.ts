@@ -32,6 +32,7 @@ import { mapBiomesRouter } from "./modules/mapBiomes/MapBiomesRoutes.js";
 import { merchantOffersRouter } from "./modules/merchantOffers/MerchantOffersRoutes.js";
 import { miningRatesRouter } from "./modules/miningRates/MiningRatesRoutes.js";
 import { missionsRouter } from "./modules/missions/MissionsRoutes.js";
+import { npcAppearancesRouter } from "./modules/npcAppearances/NpcAppearancesRoutes.js";
 import { npcsRouter } from "./modules/npcs/NpcsRoutes.js";
 import { progressionRulesRouter } from "./modules/progressionRules/ProgressionRulesRoutes.js";
 import { relicsRouter } from "./modules/relics/RelicsRoutes.js";
@@ -102,6 +103,7 @@ export function createApp() {
   v1.use("/relic-stats", relicStatsRouter);
   v1.use("/relic-rules", relicRulesRouter);
   v1.use("/npcs", npcsRouter);
+  v1.use("/npc-appearances", npcAppearancesRouter);
   v1.use("/merchant-offers", merchantOffersRouter);
   v1.use("/missions", missionsRouter);
   v1.use("/drops", dropsRouter);

@@ -1,0 +1,2 @@
+ALTER TABLE "drops" DROP CONSTRAINT "drops_creature_id_item_id_condition_unique";--> statement-breakpoint
+ALTER TABLE "drops" ADD CONSTRAINT "drops_creature_id_item_id_condition_unique" UNIQUE NULLS NOT DISTINCT("creature_id","item_id","condition");

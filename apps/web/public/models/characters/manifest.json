@@ -1,0 +1,287 @@
+{
+ "animations": [
+  {
+   "name": "UAL1",
+   "url": "/models/characters/animations/UAL1.glb",
+   "clips": [
+    "Attack",
+    "Attack2",
+    "Cast",
+    "Cast_Enter",
+    "Cast_Exit",
+    "Cast_Idle",
+    "Crouch",
+    "Crouch_Walk",
+    "Dance",
+    "Death",
+    "Fixing_Kneeling",
+    "HitReact",
+    "HitReact2",
+    "Idle",
+    "Idle_Torch_Loop",
+    "Interact",
+    "Jump",
+    "Jump_Idle",
+    "Jump_Land",
+    "PickUp",
+    "Push",
+    "Roll",
+    "Run",
+    "Sit",
+    "Sit_Enter",
+    "Sit_Exit",
+    "Sit_Talk",
+    "Sprint",
+    "Swim",
+    "Swim_Idle",
+    "Sword_Attack",
+    "Sword_Idle",
+    "Talk",
+    "Walk",
+    "Walk_Formal_Loop"
+   ]
+  },
+  {
+   "name": "UAL2",
+   "url": "/models/characters/animations/UAL2.glb",
+   "clips": [
+    "Attack3",
+    "Chest_Open",
+    "Chop",
+    "Climb",
+    "Consume",
+    "Harvest",
+    "Idle_FoldArms_Loop",
+    "Idle_Lantern_Loop",
+    "Idle_Rail_Call",
+    "Idle_Rail_Loop",
+    "Idle_Shield_Break",
+    "Idle_Shield_Loop",
+    "Knockback",
+    "LayToIdle",
+    "Melee_Hook_Rec",
+    "NinjaJump_Idle_Loop",
+    "NinjaJump_Land",
+    "NinjaJump_Start",
+    "No",
+    "Plant",
+    "Shield_Dash",
+    "Shield_OneShot",
+    "Slide_Exit",
+    "Slide_Loop",
+    "Slide_Start",
+    "Sword_Block",
+    "Sword_Dash",
+    "Sword_Heavy_Combo",
+    "Sword_Regular_A",
+    "Sword_Regular_A_Rec",
+    "Sword_Regular_B",
+    "Sword_Regular_B_Rec",
+    "Sword_Regular_C",
+    "Sword_Regular_Combo",
+    "Throw",
+    "Walk_Carry",
+    "Water",
+    "Yes"
+   ]
+  }
+ ],
+ "bodies": [
+  {
+   "gender": "male",
+   "name": "Base_Male",
+   "url": "/models/characters/bodies/Base_Male.gltf",
+   "headUrl": "/models/characters/bodies/Head_Male.gltf"
+  },
+  {
+   "gender": "female",
+   "name": "Base_Female",
+   "url": "/models/characters/bodies/Base_Female.gltf",
+   "headUrl": "/models/characters/bodies/Head_Female.gltf"
+  }
+ ],
+ "hair": [
+  {
+   "slot": "eyebrows",
+   "name": "Eyebrows_Female",
+   "url": "/models/characters/hair/Eyebrows_Female.gltf"
+  },
+  {
+   "slot": "eyebrows",
+   "name": "Eyebrows_Regular",
+   "url": "/models/characters/hair/Eyebrows_Regular.gltf"
+  },
+  {
+   "slot": "beard",
+   "name": "Hair_Beard",
+   "url": "/models/characters/hair/Hair_Beard.gltf"
+  },
+  {
+   "slot": "hair",
+   "name": "Hair_Buns",
+   "url": "/models/characters/hair/Hair_Buns.gltf"
+  },
+  {
+   "slot": "hair",
+   "name": "Hair_Buzzed",
+   "url": "/models/characters/hair/Hair_Buzzed.gltf"
+  },
+  {
+   "slot": "hair",
+   "name": "Hair_BuzzedFemale",
+   "url": "/models/characters/hair/Hair_BuzzedFemale.gltf"
+  },
+  {
+   "slot": "hair",
+   "name": "Hair_Long",
+   "url": "/models/characters/hair/Hair_Long.gltf"
+  },
+  {
+   "slot": "hair",
+   "name": "Hair_SimpleParted",
+   "url": "/models/characters/hair/Hair_SimpleParted.gltf"
+  }
+ ],
+ "outfitParts": [
+  {
+   "gender": "female",
+   "outfit": "peasant",
+   "slot": "arms",
+   "name": "Female_Peasant_Arms",
+   "url": "/models/characters/outfits/Female_Peasant_Arms.gltf"
+  },
+  {
+   "gender": "female",
+   "outfit": "peasant",
+   "slot": "body",
+   "name": "Female_Peasant_Body",
+   "url": "/models/characters/outfits/Female_Peasant_Body.gltf"
+  },
+  {
+   "gender": "female",
+   "outfit": "peasant",
+   "slot": "feet",
+   "name": "Female_Peasant_Feet",
+   "url": "/models/characters/outfits/Female_Peasant_Feet.gltf"
+  },
+  {
+   "gender": "female",
+   "outfit": "peasant",
+   "slot": "legs",
+   "name": "Female_Peasant_Legs",
+   "url": "/models/characters/outfits/Female_Peasant_Legs.gltf"
+  },
+  {
+   "gender": "female",
+   "outfit": "ranger",
+   "slot": "accessory",
+   "name": "Female_Ranger_Acc_Pauldrons",
+   "url": "/models/characters/outfits/Female_Ranger_Acc_Pauldrons.gltf"
+  },
+  {
+   "gender": "female",
+   "outfit": "ranger",
+   "slot": "arms",
+   "name": "Female_Ranger_Arms",
+   "url": "/models/characters/outfits/Female_Ranger_Arms.gltf"
+  },
+  {
+   "gender": "female",
+   "outfit": "ranger",
+   "slot": "body",
+   "name": "Female_Ranger_Body",
+   "url": "/models/characters/outfits/Female_Ranger_Body.gltf"
+  },
+  {
+   "gender": "female",
+   "outfit": "ranger",
+   "slot": "feet",
+   "name": "Female_Ranger_Feet",
+   "url": "/models/characters/outfits/Female_Ranger_Feet.gltf"
+  },
+  {
+   "gender": "female",
+   "outfit": "ranger",
+   "slot": "head",
+   "name": "Female_Ranger_Head_Hood",
+   "url": "/models/characters/outfits/Female_Ranger_Head_Hood.gltf"
+  },
+  {
+   "gender": "female",
+   "outfit": "ranger",
+   "slot": "legs",
+   "name": "Female_Ranger_Legs",
+   "url": "/models/characters/outfits/Female_Ranger_Legs.gltf"
+  },
+  {
+   "gender": "male",
+   "outfit": "peasant",
+   "slot": "arms",
+   "name": "Male_Peasant_Arms",
+   "url": "/models/characters/outfits/Male_Peasant_Arms.gltf"
+  },
+  {
+   "gender": "male",
+   "outfit": "peasant",
+   "slot": "body",
+   "name": "Male_Peasant_Body",
+   "url": "/models/characters/outfits/Male_Peasant_Body.gltf"
+  },
+  {
+   "gender": "male",
+   "outfit": "peasant",
+   "slot": "feet",
+   "name": "Male_Peasant_Feet",
+   "url": "/models/characters/outfits/Male_Peasant_Feet.gltf"
+  },
+  {
+   "gender": "male",
+   "outfit": "peasant",
+   "slot": "legs",
+   "name": "Male_Peasant_Legs",
+   "url": "/models/characters/outfits/Male_Peasant_Legs.gltf"
+  },
+  {
+   "gender": "male",
+   "outfit": "ranger",
+   "slot": "accessory",
+   "name": "Male_Ranger_Acc_Pauldron",
+   "url": "/models/characters/outfits/Male_Ranger_Acc_Pauldron.gltf"
+  },
+  {
+   "gender": "male",
+   "outfit": "ranger",
+   "slot": "arms",
+   "name": "Male_Ranger_Arms",
+   "url": "/models/characters/outfits/Male_Ranger_Arms.gltf"
+  },
+  {
+   "gender": "male",
+   "outfit": "ranger",
+   "slot": "body",
+   "name": "Male_Ranger_Body",
+   "url": "/models/characters/outfits/Male_Ranger_Body.gltf"
+  },
+  {
+   "gender": "male",
+   "outfit": "ranger",
+   "slot": "feet",
+   "name": "Male_Ranger_Feet_Boots",
+   "url": "/models/characters/outfits/Male_Ranger_Feet_Boots.gltf"
+  },
+  {
+   "gender": "male",
+   "outfit": "ranger",
+   "slot": "head",
+   "name": "Male_Ranger_Head_Hood",
+   "url": "/models/characters/outfits/Male_Ranger_Head_Hood.gltf"
+  },
+  {
+   "gender": "male",
+   "outfit": "ranger",
+   "slot": "legs",
+   "name": "Male_Ranger_Legs",
+   "url": "/models/characters/outfits/Male_Ranger_Legs.gltf"
+  }
+ ]
+}

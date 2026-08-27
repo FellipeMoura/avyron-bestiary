@@ -1,6 +1,6 @@
 import { boolean, check, integer, pgTable, real, serial, text, unique } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { itemCategoryEnum, npcRoleEnum } from "./enums";
+import { characterGenderEnum, itemCategoryEnum, npcRoleEnum } from "./enums";
 import { creatures } from "./creatures";
 import { creatureClasses } from "./creatureClasses";
 import { elements } from "./elements";
@@ -65,6 +65,47 @@ export const npcs = pgTable("npcs", {
 });
 
 /**
+ * Appearance recipe of an NPC — 1:1 child of `npcs`, same shape as
+ * `creature_stats` is to `creatures`. Player and NPCs share one visual
+ * system: a 65-bone skeleton and interchangeable parts (character kit,
+ * `apps/web/public/models/characters/`); an NPC is a recipe authored here,
+ * the player is a recipe chosen in-game (save data, never this table).
+ *
+ * Part columns hold part NAMES from the kit's manifest.json
+ * (`Male_Ranger_Body`, `Hair_Long`…), not URLs — the game resolves names
+ * through the mirrored manifest. The DB cannot see the manifest, so validity
+ * is enforced where it can be: `game:export` fails on a name the manifest
+ * doesn't list, same policy as a broken `modelUrl`.
+ *
+ * Nullable slots are genuinely optional (bald, no hood, no pauldron).
+ * The four clothing slots are NOT NULL: the base body under them is hidden
+ * at assembly (pack rule — only the head remains), so an NPC without pants
+ * would render with a hole where legs should be.
+ */
+export const npcAppearances = pgTable("npc_appearances", {
+  id: serial("id").primaryKey(),
+  npcId: integer("npc_id")
+    .notNull()
+    .unique()
+    .references(() => npcs.id, { onDelete: "cascade" }),
+  gender: characterGenderEnum("gender").notNull(),
+  hair: text("hair"),
+  eyebrows: text("eyebrows"),
+  beard: text("beard"),
+  outfitBody: text("outfit_body").notNull(),
+  outfitArms: text("outfit_arms").notNull(),
+  outfitLegs: text("outfit_legs").notNull(),
+  outfitFeet: text("outfit_feet").notNull(),
+  outfitHead: text("outfit_head"),
+  outfitAccessory: text("outfit_accessory"),
+  notes: text("notes"),
+  ...timestamps,
+});
+
+export type NpcAppearance = typeof npcAppearances.$inferSelect;
+export type NewNpcAppearance = typeof npcAppearances.$inferInsert;
+
+/**
  * What a merchant carries. Junction npc × item with upsert semantics, same
  * shape as `drops` and `map_biomes`.
  *
@@ -123,7 +164,14 @@ export const drops = pgTable(
     ...timestamps,
   },
   (t) => ({
-    uniqueTuple: unique().on(t.creatureId, t.itemId, t.condition),
+    /**
+     * `nullsNotDistinct`: sem isso o Postgres trata cada `condition` NULL como
+     * valor distinto, dois POSTs do mesmo drop sem condicao nao conflitam e a
+     * linha duplica em vez de atualizar — contra a regra de que junção se
+     * reescreve por re-POST. Hoje as 26 linhas tem condicao preenchida, mas o
+     * campo e opcional no schema Zod, entao a armadilha estava armada.
+     */
+    uniqueTuple: unique().on(t.creatureId, t.itemId, t.condition).nullsNotDistinct(),
     chanceRange: check("drops_chance_range", sql`${t.chance} >= 0 AND ${t.chance} <= 1`),
   }),
 );

@@ -4,6 +4,7 @@ import { cn } from "../lib/cn";
 const links = [
   { to: "/bestiary", label: "Bestiário", code: "CRT" },
   { to: "/items", label: "Itens", code: "ITM" },
+  { to: "/elements", label: "Elementos", code: "ELE" },
   { to: "/documents", label: "Documentos", code: "DOC" },
   { to: "/changelog", label: "Histórico", code: "LOG" },
 ] as const;
@@ -47,7 +48,7 @@ export function AppShell() {
         <Outlet />
       </main>
       <footer className="mx-auto max-w-page px-6 py-8 font-mono text-micro text-graphite">
-        interface somente leitura — alterações passam pela API
+        alterações passam pela API — e a tela de elementos escreve por ela
       </footer>
     </div>
   );

@@ -38,7 +38,7 @@ export type NewRelic = typeof relics.$inferInsert;
  * catalog already keeps between `items` (descriptive) and `item_stats`
  * (executable).
  *
- * `slotCapacity`, `maxLevel` and the two rate/buff curves are fixed
+ * `slotCapacity`, `maxLevel` and the capture-rate curve are fixed
  * per-model; only the relic *instance*'s current level (player save state,
  * not catalog data) picks a point on these curves. The catalog only needs to
  * describe the curve, not track any player's progress on it.
@@ -61,15 +61,6 @@ export const relicStats = pgTable(
     captureRatePerLevel: real("capture_rate_per_level").notNull(),
     maxLevel: integer("max_level").notNull().default(30),
 
-    /**
-     * In-battle status buff granted while this relic is equipped, to
-     * creatures matching its element or class. Placeholder magnitude,
-     * deliberately smaller than the capture bonuses — needs playtest tuning.
-     * Unit/target stat is not yet decided; see `relicario` document.
-     */
-    combatBuffBase: real("combat_buff_base").notNull().default(0),
-    combatBuffPerLevel: real("combat_buff_per_level").notNull().default(0),
-
     notes: text("notes"),
     ...timestamps,
   },
@@ -84,11 +75,6 @@ export const relicStats = pgTable(
       sql`${t.captureRatePerLevel} >= 0 AND ${t.captureRatePerLevel} <= 100`,
     ),
     maxLevelRange: check("relic_stats_max_level_range", sql`${t.maxLevel} >= 1 AND ${t.maxLevel} <= 999`),
-    combatBuffRange: check(
-      "relic_stats_combat_buff_range",
-      sql`${t.combatBuffBase} >= 0 AND ${t.combatBuffBase} <= 100
-          AND ${t.combatBuffPerLevel} >= 0 AND ${t.combatBuffPerLevel} <= 100`,
-    ),
   }),
 );
 

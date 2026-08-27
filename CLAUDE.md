@@ -11,10 +11,12 @@ O jogo chama-se **Avyron**: Godot, câmera isométrica ortográfica travada em 3
 **Nomenclatura in-world.** As classes são Loricati, Theria e Draconis; as eras são Aetheris, Titanor e Novaterra. Esses são nomes de *exibição* — os códigos (`CLS-*`) e os enums do banco (`paleozoic`, `mesozoic`, `cenozoic`) seguem inalterados. O escopo biológico real de cada classe vive em `creature_classes.biologicalScope`, e as eras traduzem por `ERA_LABEL` em `labels.ts`. Ver documento `nomenclatura`.
 
 **Dois públicos com necessidades opostas:**
-- **Humanos leem** o bestiário, mapas, lore e histórico na UI. O frontend não tem formulário de edição, painel admin ou login de usuário — não existe CRUD genérico nem sessão de usuário.
+- **Humanos leem** o bestiário, mapas, lore e histórico na UI. Não há painel admin, login de usuário, CRUD genérico nem sessão.
 - **Agentes de IA escrevem** conteúdo via API.
 
 Isso não proíbe uma ação pontual e específica disparada por um botão no frontend (ex.: um botão que dispara uma sincronização já implementada na API) — o que se evita é construir telas de edição genéricas (CRUD, sessão, edição concorrente no navegador) sem necessidade real. Toda lógica de escrita, changelog e versão continua vivendo exclusivamente na API, nunca inline no frontend.
+
+**A exceção declarada é `/elements`** (`routes/Elements.tsx`), a única tela de edição do app. Ela existe porque a paleta é o único campo do catálogo que **não se autora às cegas**: um `PATCH` com `#2E7FA8` no corpo não diz se o azul de Água some no fundo d'água do PZ-01, e a tela mostra a rampa contra os fundos reais do mapa enquanto se escolhe. Continua sem sessão, sem CRUD genérico e sem lógica de escrita no cliente — o formulário só monta o corpo de um `PATCH /elements/{code}` que já existia, com `reason`/`impact` obrigatórios. Tela de edição nova precisa do mesmo tipo de justificativa: um campo que o olho decide.
 
 ## Modelo de ameaça
 
@@ -43,7 +45,7 @@ Portas: web 5100, api 5101, postgres 5102.
 
 Estas quatro regras não têm exceção. Se algo parecer conflitar com elas, elas ganham.
 
-1. **Lógica de escrita só vive na API.** Toda transação, changelog e cálculo de versão fica em `apps/api` — nunca inline no frontend ou em script solto. O frontend não tem formulário de edição/CRUD genérico, mas pode disparar uma ação de escrita pontual e já implementada na API (ex.: um botão que chama um endpoint específico), com `x-api-key` de dev configurada via `VITE_API_KEY`.
+1. **Lógica de escrita só vive na API.** Toda transação, changelog e cálculo de versão fica em `apps/api` — nunca inline no frontend ou em script solto. O frontend não tem CRUD genérico; pode disparar uma ação de escrita pontual e já implementada na API (um botão que chama um endpoint específico) e tem **uma** tela de edição declarada, `/elements`, pelo motivo registrado acima. Nos dois casos a `x-api-key` de dev vem de `VITE_API_KEY`, e o corpo carrega `reason`/`impact` como qualquer outra escrita.
 2. **Terminologia travada.** Termo oficial: **"Despertar Ancestral"** (transformação temporária, retorno à forma base). Os termos **"Evolução"** e **"Forma Ancestral"** estão descontinuados. Middleware `rejectForbiddenTerms` scaneia todo body de escrita e retorna `422` se achar essas expressões em qualquer campo de texto, apontando o campo ofensor. Ver `apps/api/src/shared/services/terminology.ts`.
 3. **Toda escrita gera changelog na mesma transação.** Campos `reason` e `impact` são obrigatórios em todo body de POST/PATCH. O servidor grava a entrada de changelog e incrementa a versão (formato `0.NN`) sozinho — agente **nunca** escolhe a versão. Ver `apps/api/src/shared/services/changelog.ts`.
 4. **Economia de tokens é requisito funcional.** Quem consome a API é LLM pagando por token. `POST` responde só `{"code","version"}`. `GET` aceita `?fields=code,name`. Erros nomeiam campo e valores válidos: `"classCode: 'CLS-999' does not exist"`, não `"invalid"`.
@@ -69,16 +71,20 @@ Estas quatro regras não têm exceção. Se algo parecer conflitar com elas, ela
 - `{Feature}Controller.ts` — thin, delega para Service, `satisfies RequestHandler`
 - `{Feature}Routes.ts` — Express router + `registerPath` no `registry`
 
-**Quatro helpers reduzem boilerplate** em `apps/api/src/shared/services/`:
+**Seis helpers reduzem boilerplate** em `apps/api/src/shared/services/`:
 - `crudFactory.ts` — gera list/get/create/update/batchCreate para tabelas SEM FKs (elements, biomes, items, creature-classes)
 - `crudRoutes.ts` — gera as 5 rotas padrão + registerPath OpenAPI a partir dos schemas
 - `childUpsertFactory.ts` — para tabelas 1:1 filhas de um pai com `code`, endereçadas pelo código do pai e escritas por upsert (creature-stats, ability-stats, capture-rules)
 - `childUpsertRoutes.ts` — as 4 rotas desse padrão: list, get-by-parent-code, upsert, batch
+- `singletonFactory.ts` — para as tabelas de regra de linha única (combat-rules, progression-rules, economy-rules, relic-rules): `get` + `update`, `ensureRow` que recria a linha sozinho, e `orderedPairs` para os pares `min <= max` validados contra a linha **já mesclada com o patch**, não só contra o que veio no corpo
+- `singletonRoutes.ts` — as 2 rotas desse padrão: `GET` e `PATCH`. Existe menos pelas linhas economizadas e mais porque a cadeia de middleware (`writeLimiter`, `requireApiKey`, `rejectForbiddenTerms`, `validateBody`) fica num lugar só: um arquivo que esquecesse um deles passaria despercebido, já que todos são idênticos de longe
 
 **Quando NÃO usar factory:**
-- Recursos com FK (creatures, awakenings, missions, npcs, abilities, drops, junctions) — Service manual porque precisa resolver códigos para ids dentro da transação via `resolveCodeInTx` (`apps/api/src/shared/services/fkResolver.ts`)
+- Recursos com FK (creatures, awakenings, missions, npcs, abilities) — Service manual porque precisa resolver códigos para ids dentro da transação via `resolveCodeInTx` (`apps/api/src/shared/services/fkResolver.ts`)
 - Awakenings tem constraint 1-para-1 em `creatureCode` — POST em criatura que já tem despertar responde `409`
-- Junções (`drops`, `map-biomes`, `elemental-advantages`) usam semântica upsert (`onConflictDoUpdate`), sem PATCH/DELETE
+- **As 6 junções** (`drops`, `map-biomes`, `elemental-advantages`, `merchant-offers`, `mining-rates`, `creature-abilities`) usam semântica upsert (`onConflictDoUpdate`) e continuam manuais **por decisão, não por omissão**: quatro cabem no mesmo molde, mas `mining-rates` tem chave polimórfica (`classId` XOR `biomeId`, dois alvos parciais com `targetWhere`) e `creature-abilities` faz o lote sequencial de propósito e é a única com `DELETE`. Uma `junctionFactory` teria que ganhar condicional para acomodar as duas — o custo que ela deveria estar evitando. Reavaliar quando aparecer a sétima
+- **Cuidado ao escrever lote à mão:** em `onConflictDoUpdate`, `set: { col: schema.tabela.col }` renderiza `SET col = tabela.col` e reescreve a linha antiga consigo mesma — o lote insere o que é novo e ignora em silêncio o que já existia, enquanto o changelog grava que atualizou. O certo é `` sql`excluded.col` ``. Três módulos nasceram com esse defeito por cópia e foram corrigidos em 2026-08
+- **Coluna anulável no alvo do conflito** precisa de `UNIQUE ... NULLS NOT DISTINCT`: em Postgres `NULL` nunca conflita com `NULL`, então dois POSTs iguais duplicam a linha em vez de sobrescrever. `drops.condition` é o único caso hoje, corrigido na migration `0015`
 
 **Endpoints especiais:**
 - `GET /context` — snapshot markdown compacto (terminologia + elementos + classes + contagens + últimas 5 versões). Primeira leitura de qualquer agente escritor.
@@ -87,9 +93,9 @@ Estas quatro regras não têm exceção. Se algo parecer conflitar com elas, ela
 ## Regras de domínio (não estão no código)
 
 - **Elenco fechado em 3 classes:** Loricati (CLS-001, artrópodes), Theria (CLS-002, sinapsídeos), Draconis (CLS-003, sauropsídeos). Criatura que não cabe em nenhuma delas não entra no jogo. "Vertebrados Primitivos" e "Incertos" foram removidas.
-- **Classes não têm matriz de vantagem entre si.** Hard rule do Changelog 0.01 — nunca adicionar campo de dano/multiplicador em `creature_classes`; não existe ciclo tipo o elemental entre classes. Refinado pelo sistema de Relicário: um *equipamento* pode conceder bônus de captura vinculado à classe, mas isso é propriedade do equipamento, não uma relação de força CLS×CLS. O Relicário **não** concede mais buff de combate (removido do escopo do sistema — ver `relicario`). Ver `classes`, `captura`, `relicario`.
+- **Classes não têm matriz de vantagem entre si.** Hard rule do Changelog 0.01 — nunca adicionar campo de dano/multiplicador em `creature_classes`; não existe ciclo tipo o elemental entre classes. Refinado pelo sistema de Relicário: um *equipamento* pode conceder bônus de captura vinculado à classe, mas isso é propriedade do equipamento, não uma relação de força CLS×CLS. O Relicário **não** concede mais buff de combate — removido do escopo do sistema, e as colunas `combatBuffBase`/`combatBuffPerLevel` de `relic_stats` saíram do banco em 2026-08 (ver `relicario`). Ver `classes`, `captura`, `relicario`.
 - **Elementos SIM, em anel fechado:** Água → Fogo → Natureza → Terra → Gelo → Eletricidade → Água (seta = vence). Vantagem 2.0, desvantagem 0.5, resto 1.0 por omissão. Cada elemento vence exatamente um e perde para exatamente um — a simetria é o ponto, não um acidente.
-- **Criatura ↔ Despertar é 1-para-1.** Tabela `awakenings` tem `UNIQUE(creature_id)`. Ausência de linha = criatura sem despertar. Hoje a cobertura é 26/26.
+- **Criatura ↔ Despertar é 1-para-1.** Tabela `awakenings` tem `UNIQUE(creature_id)`. Ausência de linha = criatura sem despertar. Hoje a cobertura é 31/31 — e é `test_data.gd` no repo do jogo que acusa quando cai, não o export.
 - **3 eras, cada uma dividida em 3 submapas (9 mapas no total).** Cada submapa é um `game_map` próprio (`era` compartilhada, `code` sequencial: `PZ-01/02/03`, depois `MZ-*`, `CZ-*`) e representa um bloco cronológico/ecológico, não um único período geológico rígido. Aetheris já formalizada: PZ-01 "Aetheris I — Mundo dos Mares" (Cambriano-Ordoviciano), PZ-02 "Aetheris II — Conquista das Margens" (Siluriano-Devoniano), PZ-03 "Aetheris III — Domínio Terrestre" (Carbonífero-Permiano), macroprogressão MAR → MARGEM → TERRA. `~20 criaturas inéditas` segue como meta agregada por era — a distribuição entre os 3 submapas dela ainda não foi decidida. Reaparições em mapas posteriores não contam para o limite.
 - **Regra 70/30** do Despertar Ancestral: ~70% "reforço" (mesma espécie amplificada, multiplicador 1.5), ~30% "troca" (vira outra espécie relacionada, multiplicador 1.7).
 - **Subir de nível pede XP _e_ material.** As duas condições juntas, nunca só uma. O material é o item `category: "material"` da classe da **própria criatura que sobe** (um por classe: ITM-019 Loricati, ITM-020 Theria, ITM-021 Draconis), e ele cai de criatura selvagem derrotada — a classe do **derrotado** decide qual item sai, não a de quem venceu. Isso é categorização de loot, não combate: a regra de que classes não influenciam combate continua valendo. Ver documento `progressao`.
@@ -142,6 +148,7 @@ Direção: **arquivo científico dark editorial**. Não é padrão frostie/shadc
 pnpm dev                  # sobe api + web em paralelo
 pnpm typecheck            # três workspaces
 pnpm db:dump              # grava packages/db/snapshot/ — rode depois de toda escrita
+pnpm db:migrate           # aplica as migrations pendentes, uma transacao por arquivo
 pnpm db:restore           # migrations + snapshot; hidrata uma maquina do zero
 pnpm db:studio            # drizzle-kit GUI para inspecionar
 pnpm openapi:generate     # regera schema.d.ts do web a partir da API rodando
@@ -149,11 +156,14 @@ pnpm game:export          # gera o bundle JSON e espelha os .glb vinculados no r
 pnpm models:optimize      # comprime .glb novo para KTX2 — rode ao adicionar modelo
 pnpm models:placeholders  # converte placeholder_models/ (glTF) em .glb com clipes normalizados
 pnpm models:biomes        # prepara o kit de props de bioma (texturas 1024², gltf compartilhado)
+pnpm models:characters    # prepara o kit de personagens humanos (corpos, outfits modulares, animações normalizadas)
 pnpm db:seed              # CONGELADO — bootstrap offline, não usar para conteúdo novo
 pnpm db:reset             # create + generate + migrate + seed (setup do zero, sem dados de prod)
 ```
 
-`pnpm game:export` aceita `--from <url>` (default API local) e `--out <path>` (default `../avyron`). Ele **falha** se alguma criatura estiver sem stats, sem regra de captura ou sem golpes — em vez de gerar um bundle que quebra o jogo em runtime. Além do `data/bestiary.json`, ele espelha todo `.glb` referenciado por `modelUrl` em `<repo-godot>/models/`, preservando o caminho da URL (o jogo lê `res://models/...`); `modelUrl` apontando para arquivo inexistente também aborta o export. Os props de bioma (`apps/web/public/models/biomes/`, gerados por `pnpm models:biomes`) são espelhados por diretório inteiro — nenhuma criatura os referencia; quem os consome é a cena do mapa. Eles ficam como `.gltf` + texturas compartilhadas de propósito: empacotar em `.glb` embutiria uma cópia privada da textura da casca em cada árvore.
+**O export tem dois níveis.** Contradição de dado **aborta** (criatura sem stats/captura/golpes, golpe `awakeningOnly` numa criatura sem Despertar, taxa de mineração apontando para item não-mineral, classe do elenco sem pesos ou sem `workFunction`, `modelUrl` quebrado, loja vazia…); meta de conteúdo **avisa e escreve** (cobertura 1:1 de Despertar). O mesmo par de critérios vale em `scripts/dev/test_data.gd` no repo do jogo — os dois guardas precisam concordar sobre o que é erro e o que é alvo. Lista completa em [docs/DATA_WORKFLOW.md](docs/DATA_WORKFLOW.md). `pnpm game:export` aceita `--from <url>` (default API local) e `--out <path>` (default `../avyron`). Ele **falha** se alguma criatura estiver sem stats, sem regra de captura ou sem golpes — em vez de gerar um bundle que quebra o jogo em runtime. Além do `data/bestiary.json`, ele espelha todo `.glb` referenciado por `modelUrl` em `<repo-godot>/models/`, preservando o caminho da URL (o jogo lê `res://models/...`); `modelUrl` apontando para arquivo inexistente também aborta o export. Os props de bioma (`apps/web/public/models/biomes/`, gerados por `pnpm models:biomes`) são espelhados por diretório inteiro — nenhuma criatura os referencia; quem os consome é a cena do mapa. Eles ficam como `.gltf` + texturas compartilhadas de propósito: empacotar em `.glb` embutiria uma cópia privada da textura da casca em cada árvore. O kit de personagens humanos (`apps/web/public/models/characters/`, gerado por `pnpm models:characters`) segue o mesmo contrato de espelhamento por diretório.
+
+**Kit de personagens humanos.** Player e NPCs são o mesmo sistema: um esqueleto compartilhado de 65 ossos (packs Quaternius, CC0 — fonte local-only em `../exportado-quaternius`, como `fontes/`) e uma "receita de aparência" (gênero + corpo + cabelo + uma peça por slot de outfit) montada em runtime no Godot (`CharacterRig`). A receita de NPC é conteúdo do catálogo: tabela `npc_appearances` (1:1 com `npcs`, padrão childUpsert, endpoint `/npc-appearances`), exportada como `appearance` em `merchants`/`duelists` — o export valida cada nome de peça contra o manifest e aborta se não existir, mesma política do `modelUrl`. A receita do player é do jogo (hardcoded hoje, save amanhã), nunca do catálogo. O `manifest.json` do kit é o cardápio: `bodies` (Base_Male/Base_Female), `hair` (slots hair/beard/eyebrows), `outfitParts` (gender/outfit/slot) e `animations` (UAL1/UAL2 com clipes normalizados pro vocabulário do jogo — `Idle`, `Walk`, `Run`, `Attack`, `Throw` para arremesso de captura, `Consume`, `Chop`…; clipes fora de tema, como pistolas e zumbis, foram removidos na conversão). As peças substituem o corpo — vestindo outfit, só a cabeça do corpo base fica visível (regra do pack para evitar clipping).
 
 ## Coisas para NÃO fazer
 
@@ -179,6 +189,8 @@ pnpm db:reset             # create + generate + migrate + seed (setup do zero, s
 
 ## Onde procurar informação
 
+- **`../avyron/AUDITORIA.md`** — a rodada de saneamento estrutural de agosto de 2026, que cobre os dois repositórios: o que foi consertado aqui (fábrica de singletons, `excluded` nos lotes de junção, `NULLS NOT DISTINCT` em `drops`, migrador por arquivo), como cada coisa foi provada, e o que ficou pendente
+
 - **README.md** — como clonar e rodar
 - **docs/DATA_WORKFLOW.md** — como inserir e corrigir dados via API (leitura obrigatória antes de escrever)
 - **docs/MODEL_OPTIMIZATION.md** — como preparar um `.glb` do Meshy (leitura obrigatória antes de mexer em modelo ou textura)
@@ -186,7 +198,8 @@ pnpm db:reset             # create + generate + migrate + seed (setup do zero, s
 - **`packages/db/snapshot/`** — o conteúdo do catálogo, em JSONL diffável. É a cópia durável.
 - **`packages/db/src/schema/`** — modelo de dados (19 tabelas + junctions + enums)
 - **`packages/db/src/schema/stats.ts`** — a camada de números, com as fórmulas documentadas
-- **`apps/api/src/shared/services/`** — as decisões arquiteturais principais (terminology, changelog, crudFactory, crudRoutes, childUpsertFactory, childUpsertRoutes, fkResolver, query)
+- **`packages/db/src/runMigrations.ts`** — por que as migrations rodam **uma transação por arquivo** em vez do `migrate()` do Drizzle, que envolve todas numa só. Com transação única, banco novo não passa da `0008`: ela adiciona `material` ao enum `item_category` e a `0010` usa o valor num CHECK, o que o Postgres recusa antes do commit (`55P04`). Como `restore.ts` migra antes de carregar o snapshot, era o `pnpm db:restore` de máquina nova que quebrava. Contrapartida documentada lá: falha no meio deixa as anteriores aplicadas
+- **`apps/api/src/shared/services/`** — as decisões arquiteturais principais (terminology, changelog, crudFactory, crudRoutes, childUpsertFactory, childUpsertRoutes, singletonFactory, singletonRoutes, fkResolver, query)
 - **`apps/api/src/modules/elements/`** — módulo de referência para o padrão sem FK
 - **`apps/api/src/modules/creatures/`** — módulo de referência para o padrão com múltiplas FKs
 - **`apps/api/src/modules/drops/`** — padrão upsert para junctions

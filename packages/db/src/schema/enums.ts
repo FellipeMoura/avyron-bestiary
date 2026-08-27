@@ -64,3 +64,11 @@ export const itemEffectEnum = pgEnum("item_effect", [
  * it is not decorative — free text here would mean the game guessing.
  */
 export const npcRoleEnum = pgEnum("npc_role", ["merchant", "duelist", "quest", "flavor"]);
+
+/**
+ * Body type of a human character (player or NPC). Not decorative: the modular
+ * outfit parts in the character kit are gendered meshes (Male_Ranger_Legs ≠
+ * Female_Ranger_Legs — different proportions, same skeleton), so this decides
+ * which half of the parts catalog an appearance recipe may pick from.
+ */
+export const characterGenderEnum = pgEnum("character_gender", ["male", "female"]);

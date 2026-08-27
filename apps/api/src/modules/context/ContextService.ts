@@ -108,6 +108,7 @@ export async function buildContextMarkdown(): Promise<string> {
   lines.push("- **Creature ↔ Awakening is 1:1.** `POST /awakenings` for a creature that already has one → 409.");
   lines.push("- **Classes have no CLS×CLS advantage matrix** (Changelog 0.01) — no damage/multiplier/stat fields on `creature_classes`, and no cycle like the elemental ring exists between classes. Refined by the Relicário system: an *equipment* (relic) can grant a class-linked bonus to capture chance, but that is a property of the equipment, not a class-vs-class matchup. The Relicário no longer grants a combat status buff (removed from the system's scope — see `relicario`). See documents `classes`, `captura`, `relicario`.");
   lines.push("- **Elements DO influence combat**, as a closed ring: Agua → Fogo → Natureza → Terra → Gelo → Eletricidade → Agua (arrow means \"beats\"). Advantage 2.0, disadvantage 0.5, everything else 1.0 by omission.");
+  lines.push("- **Elements carry a visual palette the game consumes.** `paletteShadow`/`paletteMid`/`paletteHighlight` are one RAMP read by luminance (darkest texel of the creature body lands on shadow, brightest on highlight) — not three independent colours. `paletteAura` is the Despertar Ancestral glow and is a separate column on purpose: an aura in the body's own colour is invisible. `paletteSpread` (0–0.5) is how far one creature may drift inside the family. All colours are `#RRGGBB`, six digits. Prefer the `/elements` screen in the web UI — it previews the ramp against the real map backdrops, which a PATCH cannot.");
   lines.push("- **3 eras × 3 maps × ~20 unique creatures.** Reappearances on later maps do not count toward the cap.");
   lines.push("");
 
@@ -137,7 +138,7 @@ export async function buildContextMarkdown(): Promise<string> {
   lines.push("## Relicário capture system");
   lines.push("_Replaces the old consumable capture items (`ITM-013..015`, deprecated). See document `relicario`._");
   lines.push("- `relics` — catalog of relic **models** (`RLC-*`). `elementCode`/`classCode` are fixed for the model's whole lifetime.");
-  lines.push("- `relic-stats` — 1:1 with a relic, addressed by relic code. `slotCapacity`, `baseCaptureRate`, `captureRatePerLevel`, `maxLevel`, `combatBuffBase`, `combatBuffPerLevel`.");
+  lines.push("- `relic-stats` — 1:1 with a relic, addressed by relic code. `slotCapacity`, `baseCaptureRate`, `captureRatePerLevel`, `maxLevel`.");
   lines.push("- `relic-rules` — **singleton**, global tuning: capture floor/ceiling and the three bonus/penalty points, plus the relic level-up gate (XP curve + class material cost, same two-part shape as creature levelling). `GET`/`PATCH` only.");
   lines.push("- Capture formula (works in 0–100 percentage points end to end, no HP or Despertar term):");
   lines.push("  ```");

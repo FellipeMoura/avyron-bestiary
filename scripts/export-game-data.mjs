@@ -18,7 +18,7 @@
  * The export FAILS on incomplete data rather than shipping it. A creature
  * without stats would be a creature the battle system divides by zero on.
  */
-import { copyFileSync, existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -137,12 +137,14 @@ const [
   creatureAbilities,
   maps,
   biomes,
+  mapBiomes,
   changelog,
   combatRules,
   allItems,
   itemStats,
   economyRules,
   npcs,
+  npcAppearances,
   merchantOffers,
   miningRates,
   drops,
@@ -163,12 +165,14 @@ const [
   get(`/creature-abilities?${LIMIT}`),
   get(`/maps?${LIMIT}`),
   get(`/biomes?${LIMIT}`),
+  get(`/map-biomes?${LIMIT}`),
   get(`/changelog?limit=1`),
   get(`/combat-rules`),
   get(`/items?${LIMIT}`),
   get(`/item-stats?${LIMIT}`),
   get(`/economy-rules`),
   get(`/npcs?${LIMIT}`),
+  get(`/npc-appearances?${LIMIT}`),
   get(`/merchant-offers?${LIMIT}`),
   get(`/mining-rates?${LIMIT}`),
   get(`/drops?${LIMIT}`),
@@ -214,6 +218,66 @@ for (const offer of merchantOffers) {
   offersByNpc.set(offer.npcId, list);
 }
 
+/**
+ * Receita de aparência por NPC, validada contra o manifest do kit de
+ * personagens — a mesma política do `modelUrl`: nome de peça que o manifest
+ * não lista é link quebrado que o jogo renderizaria como buraco, então
+ * aborta o export em vez de gerar bundle mentiroso. O banco não enxerga o
+ * manifest (o Zod só valida forma); a validação de existência mora aqui.
+ */
+const CHARACTERS_MANIFEST = resolve(REPO_ROOT, "apps/web/public/models/characters/manifest.json");
+const appearanceByNpc = new Map(npcAppearances.map((a) => [a.npcId, a]));
+
+function buildAppearance(npc) {
+  const a = appearanceByNpc.get(npc.id);
+  if (!a) return null;
+  if (!existsSync(CHARACTERS_MANIFEST)) {
+    problems.push(
+      `npc ${npc.code} has an appearance but the character kit manifest is missing — run pnpm models:characters`,
+    );
+    return null;
+  }
+  const kit = JSON.parse(readFileSync(CHARACTERS_MANIFEST, "utf8"));
+  const hairByName = new Map(kit.hair.map((h) => [h.name, h]));
+  const partsByName = new Map(kit.outfitParts.map((p) => [p.name, p]));
+
+  for (const [field, slot] of [["hair", "hair"], ["eyebrows", "eyebrows"], ["beard", "beard"]]) {
+    const value = a[field];
+    if (value == null) continue;
+    const entry = hairByName.get(value);
+    if (!entry || entry.slot !== slot) {
+      problems.push(`npc ${npc.code} appearance: ${field} '${value}' is not a ${slot} in the character kit manifest`);
+    }
+  }
+  for (const [field, slot] of [
+    ["outfitBody", "body"], ["outfitArms", "arms"], ["outfitLegs", "legs"],
+    ["outfitFeet", "feet"], ["outfitHead", "head"], ["outfitAccessory", "accessory"],
+  ]) {
+    const value = a[field];
+    if (value == null) continue;
+    const entry = partsByName.get(value);
+    if (!entry || entry.slot !== slot) {
+      problems.push(`npc ${npc.code} appearance: ${field} '${value}' is not a ${slot} part in the character kit manifest`);
+    } else if (entry.gender !== a.gender) {
+      problems.push(`npc ${npc.code} appearance: ${field} '${value}' is ${entry.gender} but the npc is ${a.gender}`);
+    }
+  }
+
+  // Chaves planas por slot — é o formato que a montagem no Godot consome.
+  return {
+    gender: a.gender,
+    hair: a.hair,
+    eyebrows: a.eyebrows,
+    beard: a.beard,
+    body: a.outfitBody,
+    arms: a.outfitArms,
+    legs: a.outfitLegs,
+    feet: a.outfitFeet,
+    head: a.outfitHead,
+    accessory: a.outfitAccessory,
+  };
+}
+
 const statsByCreature = byId([]);
 for (const s of creatureStats) statsByCreature.set(s.creatureId, s);
 const captureByCreature = new Map(captureRules.map((c) => [c.creatureId, c]));
@@ -247,6 +311,18 @@ const relicStatByRelic = new Map(relicStats.map((s) => [s.relicId, s]));
 // ---------------------------------------------------------------------------
 
 const problems = [];
+
+/**
+ * Furos que não impedem o jogo de rodar, mas que ninguém escolheu de
+ * propósito. Diferente de `problems`: estes não abortam, saem no fim como
+ * aviso alto.
+ *
+ * O critério é o mesmo do jogo: contradição de dado aborta, meta de conteúdo
+ * avisa. Cobertura de Despertar é meta — `docs/DATA_WORKFLOW.md` chama o
+ * passo de opcional de propósito, para caber cadastrar a criatura hoje e o
+ * Despertar amanhã.
+ */
+const warnings = [];
 
 /**
  * Itens com preço e efeito. Um item sem linha em `item_stats` sai com valor 0
@@ -294,7 +370,7 @@ const outItems = allItems.map((i) => {
 /**
  * Modelos de Relicário, achatados com seus números — o jogo não precisa
  * saber que `relics`/`relic_stats` são duas tabelas no banco, só que um
- * modelo tem um elemento, uma classe e uma curva de captura/buff fixas.
+ * modelo tem um elemento, uma classe e uma curva de captura fixas.
  */
 const outRelics = relics.map((r) => {
   const s = relicStatByRelic.get(r.id);
@@ -309,8 +385,6 @@ const outRelics = relics.map((r) => {
     baseCaptureRate: s?.baseCaptureRate ?? 0,
     captureRatePerLevel: s?.captureRatePerLevel ?? 0,
     maxLevel: s?.maxLevel ?? 1,
-    combatBuffBase: s?.combatBuffBase ?? 0,
-    combatBuffPerLevel: s?.combatBuffPerLevel ?? 0,
   };
 });
 
@@ -331,6 +405,7 @@ const outMerchants = npcs
       faction: n.faction,
       map: code(mapById, n.mapId),
       notes: n.notes,
+      appearance: buildAppearance(n),
       offers: offers.map((o) => ({
         itemCode: code(itemById, o.itemId),
         // Preço já resolvido: null no banco significa "cobra o base", e
@@ -355,6 +430,7 @@ const outDuelists = npcs
     faction: n.faction,
     map: code(mapById, n.mapId),
     notes: n.notes,
+    appearance: buildAppearance(n),
   }));
 
 const outAbilities = abilities.map((a) => {
@@ -386,6 +462,27 @@ const outCreatures = creatures.map((c) => {
   if (!s) problems.push(`creature ${c.code} (${c.originalName}) has no creature_stats row`);
   if (!cap) problems.push(`creature ${c.code} (${c.originalName}) has no capture_rules row`);
   if (moves.length === 0) problems.push(`creature ${c.code} (${c.originalName}) knows no abilities`);
+
+  // Golpe de assinatura sem Despertar é um golpe que o jogador vê na ficha e
+  // nunca consegue usar: `Combatant` filtra `awakeningOnly` por
+  // `is_awakened`, e sem linha em `awakenings` a criatura não desperta nunca.
+  // Foi assim que `CRT-013` jogou com 5 golpes contra 6 do resto do elenco
+  // sem nada acusar — o export não olhava, e `test_data.gd` só reclamava da
+  // cobertura 1:1, que é outra coisa.
+  if (!awk) {
+    const signature = moves
+      .map((m) => abilityById.get(m.abilityId))
+      .filter((a) => a?.awakeningOnly);
+    for (const a of signature) {
+      problems.push(
+        `creature ${c.code} (${c.originalName}) has no awakening but knows ${a.code} (${a.name}), `
+          + `which is awakeningOnly — the move would be permanently unusable`,
+      );
+    }
+    // A cobertura em si é meta, não invariante: sem Despertar a criatura
+    // ainda joga, só não usa o medidor de carga. Avisa e segue.
+    warnings.push(`creature ${c.code} (${c.originalName}) has no awakening — 1:1 coverage broken`);
+  }
   // Sem tamanho o jogo não tem como instanciar a criatura. Se a origem for um
   // deploy antigo, o campo chega `undefined`, o JSON.stringify o descarta e o
   // bundle sairia silenciosamente sem escala — falhar aqui é o ponto.
@@ -402,8 +499,6 @@ const outCreatures = creatures.map((c) => {
     class: code(classById, c.classId),
     element: code(elementById, c.elementId),
     map: code(mapById, c.mapId),
-    biome: code(biomeById, c.biomeId),
-    role: c.role,
     silhouetteNote: c.silhouetteNote,
     modelUrl: c.modelUrl,
     stats: s
@@ -460,12 +555,117 @@ const outCreatures = creatures.map((c) => {
   };
 });
 
+/**
+ * Paleta do elemento: rampa de três paradas lida por LUMINÂNCIA no jogo, mais
+ * a cor da aura do Despertar Ancestral e a dispersão permitida dentro da
+ * família. Ver o comentário de `packages/db/src/schema/elements.ts` sobre por
+ * que isto é rampa e não conjunto de cores soltas.
+ *
+ * A divisão entre abortar e avisar segue o critério da casa:
+ *
+ *  - elemento **sem paleta nenhuma** avisa. O jogo cai no corpo neutro e
+ *    continua jogável — é meta de conteúdo, como cobertura de Despertar.
+ *  - elemento com paleta **pela metade** aborta. Rampa sem uma das paradas
+ *    não é rampa: o jogo teria de inventar a cor que falta, e o resultado
+ *    seria uma criatura errada em silêncio, que é a classe de furo que o
+ *    `CRT-013` custou caro para ensinar.
+ *  - hex malformado aborta. A API valida na escrita, mas um snapshot
+ *    restaurado de outra máquina não passou por ela.
+ */
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+
+function shapeElementPalette(e) {
+  const stops = {
+    shadow: e.paletteShadow,
+    mid: e.paletteMid,
+    highlight: e.paletteHighlight,
+  };
+  const filled = Object.entries(stops).filter(([, v]) => v != null);
+
+  if (filled.length === 0) {
+    warnings.push(
+      `element ${e.code} (${e.name}) has no palette — creatures of this element fall back to the neutral body`,
+    );
+    return null;
+  }
+  if (filled.length < 3) {
+    const missing = Object.entries(stops)
+      .filter(([, v]) => v == null)
+      .map(([k]) => k);
+    problems.push(
+      `element ${e.code} (${e.name}) has a partial palette — missing ${missing.join(", ")}`,
+    );
+    return null;
+  }
+
+  // `aura` cai para o highlight quando não autorada. Ver o comentário da
+  // coluna: o fallback é o comportamento seguro, não o desejável.
+  const aura = e.paletteAura ?? e.paletteHighlight;
+  for (const [field, value] of [...filled, ["aura", aura]]) {
+    if (!HEX_COLOR.test(value)) {
+      problems.push(`element ${e.code} (${e.name}) palette ${field} '${value}' is not #RRGGBB`);
+      return null;
+    }
+  }
+
+  return {
+    shadow: stops.shadow,
+    mid: stops.mid,
+    highlight: stops.highlight,
+    aura,
+    spread: e.paletteSpread ?? 0,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// biomas do mapa
+// ---------------------------------------------------------------------------
+
+/** mapId -> [códigos de bioma], na ordem de `sortOrder`. */
+const biomeCodesByMap = new Map();
+for (const link of [...mapBiomes].sort((a, b) => a.sortOrder - b.sortOrder)) {
+  const biomeCode = code(biomeById, link.biomeId);
+  if (biomeCode == null) continue;
+  const list = biomeCodesByMap.get(link.mapId) ?? [];
+  list.push(biomeCode);
+  biomeCodesByMap.set(link.mapId, list);
+}
+
+/**
+ * O documento `mineracao` manda: "cada novo BIO-* precisa de suas 12 taxas".
+ * Bioma de mapa sem taxa nenhuma não quebra o jogo — `MiningTable` trata lado
+ * ausente como neutro (×1) e a mineração vira só classe. É justamente por ser
+ * silencioso que precisa aparecer: a dimensão some da fórmula sem ninguém ver.
+ *
+ * Avisa em vez de abortar, mesma política de dois níveis da cobertura de
+ * Despertar: é alvo de conteúdo por preencher, não contradição de dado.
+ */
+const biomesWithRates = new Set(
+  miningRates.filter((r) => r.biomeId != null).map((r) => r.biomeId),
+);
+for (const [mapId, codes] of biomeCodesByMap) {
+  const mapCode = code(mapById, mapId);
+  for (const biomeCode of codes) {
+    const biome = biomes.find((b) => b.code === biomeCode);
+    if (biome && !biomesWithRates.has(biome.id)) {
+      warnings.push(
+        `biome ${biome.code} (${biome.name}) is on map ${mapCode} but has no mining_rates — `
+          + "mining there falls back to class-only, silently",
+      );
+    }
+  }
+}
+
 const bundle = {
   dataVersion: changelog[0]?.version ?? "0.00",
   generatedAt: new Date().toISOString(),
   source: FROM,
   rules: shapeRules(combatRules, progressionRules, relicRules),
-  elements: elements.map((e) => ({ code: e.code, name: e.name })),
+  elements: elements.map((e) => ({
+    code: e.code,
+    name: e.name,
+    palette: shapeElementPalette(e),
+  })),
   elementalAdvantages: advantages.map((a) => ({
     attacker: code(elementById, a.attackerElementId),
     defender: code(elementById, a.defenderElementId),
@@ -477,7 +677,21 @@ const bundle = {
     biologicalScope: c.biologicalScope,
     workFunction: c.workFunction ? JSON.parse(c.workFunction) : null,
   })),
-  maps: maps.map((m) => ({ code: m.code, name: m.name, era: m.era, sortOrder: m.sortOrder })),
+  maps: maps.map((m) => ({
+    code: m.code,
+    name: m.name,
+    era: m.era,
+    sortOrder: m.sortOrder,
+    /**
+     * Os biomas do mapa, na ordem de `sortOrder` da junção. O jogo ainda usa
+     * um bioma só por mapa (`WorldRoot.DEFAULT_BIOME`) porque o mundo não tem
+     * noção espacial de bioma — mas precisa desta lista para **conferir** que
+     * o bioma que ele declara pertence ao mapa. Sem isso a checagem não teria
+     * contra o que comparar, e o `map_biomes` seguiria sendo um módulo de API
+     * que ninguém consome.
+     */
+    biomes: biomeCodesByMap.get(m.id) ?? [],
+  })),
   biomes: biomes.map((b) => ({
     code: b.code,
     name: b.name,
@@ -516,6 +730,55 @@ const bundle = {
     })),
   },
 };
+
+// ---------------------------------------------------------------------------
+// mineração — os três furos que `test_data.gd` já pegava e o export não
+//
+// Nenhum derruba o jogo: sem pesos a classe minera pelo bioma puro, sem perfil
+// o ritmo cai no neutro, e um peso órfão some na normalização. É justamente
+// por isso que precisam abortar aqui — os três transformam um número que o
+// designer escreveu em nada, silenciosamente, e o sintoma ("a mineração da
+// Theria parece igual à da Draconis") não aponta para a causa.
+// ---------------------------------------------------------------------------
+
+const mineralIds = new Set(minerals.map((i) => i.id));
+
+// Peso apontando para item que não é `mineral`: a linha viaja em
+// `mining.rates`, mas o item não entra em `mining.items`, e o jogo distribui
+// um peso sobre um código que não existe do lado dele. A FK do banco não
+// cobre — ela garante que o item existe, não que ele seja minerável.
+for (const r of miningRates) {
+  if (!mineralIds.has(r.itemId)) {
+    const item = itemById.get(r.itemId);
+    problems.push(
+      `mining rate for ${code(classById, r.classId) ?? code(biomeById, r.biomeId)} points at `
+        + `${item?.code ?? `item ${r.itemId}`} (${item?.name ?? "?"}), whose category is `
+        + `'${item?.category ?? "?"}' and not 'mineral' — the weight would be exported into a void`,
+    );
+  }
+}
+
+// Toda classe com criatura no elenco precisa de pesos e de perfil de
+// trabalho. O elenco é fechado em 3 classes, então isto não é um gate que
+// aperta com o tempo — é o que garante que classe nova não entre muda.
+const castClassIds = new Set(creatures.map((c) => c.classId));
+const ratesByClass = new Set(miningRates.filter((r) => r.classId != null).map((r) => r.classId));
+
+for (const cls of classes) {
+  if (!castClassIds.has(cls.id)) continue;
+  if (!ratesByClass.has(cls.id)) {
+    problems.push(
+      `class ${cls.code} (${cls.name}) has creatures in the cast but no mining_rates — `
+        + `its creatures would mine by biome only, and the work profile would be decoration`,
+    );
+  }
+  if (!cls.workFunction) {
+    problems.push(
+      `class ${cls.code} (${cls.name}) has creatures in the cast but no workFunction — `
+        + `mining speed falls back to neutral and the role label comes out empty`,
+    );
+  }
+}
 
 // ---------------------------------------------------------------------------
 // models
@@ -560,19 +823,29 @@ for (const url of modelUrls) {
  * continuarem válidas.
  */
 const BIOMES_DIR = resolve(WEB_MODELS_DIR, "biomes");
-let biomeCopies = 0;
+
+/**
+ * O kit de personagens (corpos, cabelos, peças de outfit, bibliotecas de
+ * animação — `pnpm models:characters`) segue o mesmo contrato dos biomas:
+ * espelhado por diretório inteiro, .gltf + .bin + texturas compartilhadas
+ * viajando juntos para as URIs relativas continuarem válidas.
+ */
+const CHARACTERS_DIR = resolve(WEB_MODELS_DIR, "characters");
+
 function mirrorDir(srcDir, destDir) {
+  let copies = 0;
   for (const entry of readdirSync(srcDir, { withFileTypes: true })) {
     const src = join(srcDir, entry.name);
     const dest = join(destDir, entry.name);
     if (entry.isDirectory()) {
-      mirrorDir(src, dest);
+      copies += mirrorDir(src, dest);
     } else {
       mkdirSync(destDir, { recursive: true });
       copyFileSync(src, dest);
-      biomeCopies += 1;
+      copies += 1;
     }
   }
+  return copies;
 }
 
 // ---------------------------------------------------------------------------
@@ -589,20 +862,32 @@ if (problems.length > 0) {
 mkdirSync(dirname(OUT_FILE), { recursive: true });
 writeFileSync(OUT_FILE, `${JSON.stringify(bundle, null, 2)}\n`, "utf8");
 
+// Depois da escrita, de propósito: aviso não bloqueia, mas fica como a última
+// coisa antes do resumo, onde não passa despercebido.
+if (warnings.length > 0) {
+  console.warn(`\nexport warnings — ${warnings.length} (bundle written anyway):`);
+  for (const w of warnings) console.warn(`  ! ${w}`);
+  console.warn("");
+}
+
 for (const { src, dest } of modelCopies) {
   mkdirSync(dirname(dest), { recursive: true });
   copyFileSync(src, dest);
 }
 
-if (existsSync(BIOMES_DIR)) {
-  mirrorDir(BIOMES_DIR, resolve(OUT_REPO, "models/biomes"));
-}
+const biomeCopies = existsSync(BIOMES_DIR)
+  ? mirrorDir(BIOMES_DIR, resolve(OUT_REPO, "models/biomes"))
+  : 0;
+const characterCopies = existsSync(CHARACTERS_DIR)
+  ? mirrorDir(CHARACTERS_DIR, resolve(OUT_REPO, "models/characters"))
+  : 0;
 
 const kb = (Buffer.byteLength(JSON.stringify(bundle)) / 1024).toFixed(1);
 console.log(`dataVersion: ${bundle.dataVersion}`);
 console.log(`written:     ${OUT_FILE} (${kb} KB)`);
 console.log(`models:      ${modelCopies.length} .glb mirrored to ${resolve(OUT_REPO, "models")}`);
 console.log(`biomes:      ${biomeCopies} files mirrored to ${resolve(OUT_REPO, "models/biomes")}`);
+console.log(`characters:  ${characterCopies} files mirrored to ${resolve(OUT_REPO, "models/characters")}`);
 console.log(
   `contents:    ${bundle.creatures.length} creatures, ${bundle.abilities.length} abilities, ` +
     `${bundle.elementalAdvantages.length} elemental pairs, ${bundle.classes.length} classes, ` +

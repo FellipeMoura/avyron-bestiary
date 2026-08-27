@@ -2,6 +2,24 @@ import { z } from "../../shared/openapi/zod";
 import { changeMetadataSchema, paginationSchema } from "../../shared/services/query";
 
 // ---------------------------------------------------------------------------
+// palette
+// ---------------------------------------------------------------------------
+
+/**
+ * `#RRGGBB`, uppercase or lowercase, always six digits.
+ *
+ * Three-digit shorthand is rejected on purpose: the game parses these with
+ * Godot's `Color(String)`, which accepts both, but the editing screen shows
+ * them in a native colour input that only round-trips six digits — accepting
+ * `#f00` here would silently rewrite itself to `#ff0000` on the next save and
+ * make the changelog record an edit nobody made.
+ */
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+
+const hexColor = (example: string) =>
+  z.string().regex(HEX_COLOR, "expected #RRGGBB").openapi({ example });
+
+// ---------------------------------------------------------------------------
 // response shape
 // ---------------------------------------------------------------------------
 
@@ -11,6 +29,11 @@ export const ElementSchema = z
     code: z.string().openapi({ example: "ELE-001" }),
     name: z.string().openapi({ example: "Fogo" }),
     notes: z.string().nullable(),
+    paletteShadow: z.string().nullable(),
+    paletteMid: z.string().nullable(),
+    paletteHighlight: z.string().nullable(),
+    paletteAura: z.string().nullable(),
+    paletteSpread: z.number(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
   })
@@ -24,6 +47,11 @@ export const ELEMENT_FIELDS = [
   "code",
   "name",
   "notes",
+  "paletteShadow",
+  "paletteMid",
+  "paletteHighlight",
+  "paletteAura",
+  "paletteSpread",
   "createdAt",
   "updatedAt",
 ] as const;
@@ -56,6 +84,16 @@ const elementCoreSchema = z.object({
   code: z.string().min(3).max(16).openapi({ example: "ELE-006" }),
   name: z.string().min(1).max(64).openapi({ example: "Sombra" }),
   notes: z.string().max(2000).nullish(),
+  paletteShadow: hexColor("#3B0F0A").nullish(),
+  paletteMid: hexColor("#C6552F").nullish(),
+  paletteHighlight: hexColor("#FFC66B").nullish(),
+  paletteAura: hexColor("#FF8A3D").nullish(),
+  // Upper bound is 0.5 and not 1.0: the bias is applied to a 0..1 ramp
+  // position, so a spread past half the ramp lets one creature of the family
+  // land on the shadow stop while another lands on the highlight — which is
+  // exactly the "two creatures of the same element look unrelated" outcome
+  // the ramp exists to prevent.
+  paletteSpread: z.number().min(0).max(0.5).optional().openapi({ example: 0.18 }),
 });
 
 // `code` is optional on single-create: the factory generates the next

@@ -53,7 +53,7 @@ Se precisar rodar as etapas do banco separadamente:
 ```powershell
 pnpm db:create      # cria o banco 'bestiary' via node
 pnpm db:generate    # drizzle-kit gera drizzle/0000_*.sql se schema mudou
-pnpm db:migrate     # aplica as migrations
+pnpm db:migrate     # aplica as migrations — uma transacao por arquivo, retoma de onde parou
 pnpm db:seed        # CONGELADO — bootstrap offline a partir de ./fontes/
 pnpm db:dump        # grava packages/db/snapshot/ — rode depois de toda escrita
 pnpm db:restore     # migrations + snapshot; hidrata uma máquina do zero

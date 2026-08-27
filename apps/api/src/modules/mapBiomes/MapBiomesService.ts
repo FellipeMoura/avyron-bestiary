@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@bestiary/db";
 import type { Database } from "@bestiary/db";
 import { recordChange } from "../../shared/services/changelog";
@@ -81,7 +81,11 @@ export const mapBiomesService = {
         .values(resolvedRows)
         .onConflictDoUpdate({
           target: [schema.mapBiomes.mapId, schema.mapBiomes.biomeId],
-          set: { sortOrder: schema.mapBiomes.sortOrder, updatedAt: new Date() },
+          // `excluded` is the proposed row. Naming the table column here renders
+          // `SET sort_order = <table>.sort_order`, rewriting the old row with itself: the
+          // batch inserts what is new and silently ignores everything that already
+          // existed, while the changelog records that it updated.
+          set: { sortOrder: sql`excluded.sort_order`, updatedAt: new Date() },
         })
         .returning({ id: schema.mapBiomes.id });
       const ids = inserted.map((r) => r.id);

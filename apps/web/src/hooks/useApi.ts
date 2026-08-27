@@ -238,3 +238,43 @@ export function useChangelog(limit = 100) {
       unwrap(await api.GET("/changelog", { params: { query: { limit, offset: 0 } } })),
   });
 }
+
+/**
+ * Edição da paleta de um elemento.
+ *
+ * É a primeira escrita do frontend que altera CONTEÚDO do catálogo (as duas
+ * anteriores mexem em `modelUrl`, que é ligação com asset). Não abre exceção
+ * à regra do `DATA_WORKFLOW.md`: a API continua sendo a única via de escrita,
+ * `reason`/`impact` continuam obrigatórios e o changelog registra igual. O que
+ * muda é só quem monta o corpo da requisição — um formulário em vez de um
+ * PowerShell. E a paleta é justamente o campo que pede isso: escolher seis
+ * rampas de cor às cegas, sem ver o resultado ao lado, não é trabalho que
+ * `Invoke-RestMethod` faça bem.
+ */
+export function useUpdateElementPalette() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      code: string;
+      paletteShadow: string;
+      paletteMid: string;
+      paletteHighlight: string;
+      paletteAura: string;
+      paletteSpread: number;
+      reason: string;
+      impact: string;
+    }) => {
+      const { code, ...body } = input;
+      return unwrap(
+        await api.PATCH("/elements/{code}", {
+          params: { path: { code } },
+          headers: { "x-api-key": import.meta.env.VITE_API_KEY ?? "" },
+          body,
+        }),
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["elements"] });
+    },
+  });
+}

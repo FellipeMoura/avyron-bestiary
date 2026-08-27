@@ -1,9 +1,8 @@
 import "./loadEnv";
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { drizzle } from "drizzle-orm/postgres-js";
-import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
+import { runMigrations } from "./runMigrations";
 import { LATEST_VERSION_SQL, TABLES } from "./tables";
 
 /**
@@ -35,9 +34,7 @@ try {
   // de verdade dele. Migrar antes evita carregar dado numa tabela cujo
   // formato mudou depois do dump.
   console.log("aplicando migrations...");
-  const migrationClient = postgres(url, { max: 1, onnotice: () => {} });
-  await migrate(drizzle(migrationClient), { migrationsFolder: "./drizzle" });
-  await migrationClient.end();
+  await runMigrations(url);
 
   console.log(`truncando ${TABLES.length} tabelas...`);
   await sql.unsafe(`TRUNCATE ${TABLES.join(", ")} RESTART IDENTITY CASCADE`);

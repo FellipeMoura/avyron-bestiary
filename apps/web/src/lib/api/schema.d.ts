@@ -3932,6 +3932,170 @@ export interface paths {
         };
         trace?: never;
     };
+    "/npc-appearances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List npc-appearances */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    offset?: number | null;
+                    fields?: string;
+                    npcCode?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NpcAppearance"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Upsert npc-appearances for one npc */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpsertNpcAppearanceBody"];
+                };
+            };
+            responses: {
+                /** @description Upserted */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UpsertNpcAppearanceResponse"];
+                    };
+                };
+                /** @description Validation failed or unknown code */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/npc-appearances/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Batch upsert npc-appearances */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BatchUpsertNpcAppearancesBody"];
+                };
+            };
+            responses: {
+                /** @description Upserted */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BatchUpsertNpcAppearancesResponse"];
+                    };
+                };
+                /** @description Validation failed or unknown code */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/npc-appearances/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get by npc code */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    code: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The row */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NpcAppearance"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/npcs": {
         parameters: {
             query?: never;
@@ -5872,6 +6036,11 @@ export interface components {
             /** @example Fogo */
             name: string;
             notes: string | null;
+            paletteShadow: string | null;
+            paletteMid: string | null;
+            paletteHighlight: string | null;
+            paletteAura: string | null;
+            paletteSpread: number;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -5884,6 +6053,16 @@ export interface components {
                 /** @example Sombra */
                 name: string;
                 notes?: string | null;
+                /** @example #3B0F0A */
+                paletteShadow?: string | null;
+                /** @example #C6552F */
+                paletteMid?: string | null;
+                /** @example #FFC66B */
+                paletteHighlight?: string | null;
+                /** @example #FF8A3D */
+                paletteAura?: string | null;
+                /** @example 0.18 */
+                paletteSpread?: number;
             }[];
             /**
              * @description Por que a mudança está sendo feita. Vai para o changelog.
@@ -5902,6 +6081,16 @@ export interface components {
             /** @example Sombra */
             name: string;
             notes?: string | null;
+            /** @example #3B0F0A */
+            paletteShadow?: string | null;
+            /** @example #C6552F */
+            paletteMid?: string | null;
+            /** @example #FFC66B */
+            paletteHighlight?: string | null;
+            /** @example #FF8A3D */
+            paletteAura?: string | null;
+            /** @example 0.18 */
+            paletteSpread?: number;
             /**
              * @description Por que a mudança está sendo feita. Vai para o changelog.
              * @example 6º elemento definido para expansão do Cenozoico
@@ -5919,6 +6108,16 @@ export interface components {
             /** @example Sombra */
             name?: string;
             notes?: string | null;
+            /** @example #3B0F0A */
+            paletteShadow?: string | null;
+            /** @example #C6552F */
+            paletteMid?: string | null;
+            /** @example #FFC66B */
+            paletteHighlight?: string | null;
+            /** @example #FF8A3D */
+            paletteAura?: string | null;
+            /** @example 0.18 */
+            paletteSpread?: number;
             /**
              * @description Por que a mudança está sendo feita. Vai para o changelog.
              * @example 6º elemento definido para expansão do Cenozoico
@@ -6490,6 +6689,126 @@ export interface components {
              */
             impact: string;
         };
+        NpcAppearance: {
+            id: number;
+            npcId: number;
+            /** @enum {string} */
+            gender: "male" | "female";
+            hair: string | null;
+            eyebrows: string | null;
+            beard: string | null;
+            outfitBody: string;
+            outfitArms: string;
+            outfitLegs: string;
+            outfitFeet: string;
+            outfitHead: string | null;
+            outfitAccessory: string | null;
+            notes: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        BatchUpsertNpcAppearancesResponse: {
+            codes: string[];
+            version: string;
+        };
+        BatchUpsertNpcAppearancesBody: {
+            items: {
+                /** @example NPC-001 */
+                npcCode: string;
+                /**
+                 * @description As peças de outfit são malhas por gênero (Male_*\/Female_*); os prefixos das peças devem bater com este campo.
+                 * @example male
+                 * @enum {string}
+                 */
+                gender: "male" | "female";
+                /**
+                 * @description Nome no manifest, slot hair. Nulo = careca.
+                 * @example Hair_SimpleParted
+                 */
+                hair?: string | null;
+                /** @example Eyebrows_Regular */
+                eyebrows?: string | null;
+                /** @example Hair_Beard */
+                beard?: string | null;
+                /** @example Male_Peasant_Body */
+                outfitBody: string;
+                /** @example Male_Peasant_Arms */
+                outfitArms: string;
+                /** @example Male_Peasant_Legs */
+                outfitLegs: string;
+                /** @example Male_Peasant_Feet */
+                outfitFeet: string;
+                /**
+                 * @description Capuz/chapéu. Nulo = cabeça descoberta.
+                 * @example Male_Ranger_Head_Hood
+                 */
+                outfitHead?: string | null;
+                /** @example Male_Ranger_Acc_Pauldron */
+                outfitAccessory?: string | null;
+                notes?: string | null;
+            }[];
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        UpsertNpcAppearanceResponse: {
+            code: string;
+            version: string;
+        };
+        UpsertNpcAppearanceBody: {
+            /** @example NPC-001 */
+            npcCode: string;
+            /**
+             * @description As peças de outfit são malhas por gênero (Male_*\/Female_*); os prefixos das peças devem bater com este campo.
+             * @example male
+             * @enum {string}
+             */
+            gender: "male" | "female";
+            /**
+             * @description Nome no manifest, slot hair. Nulo = careca.
+             * @example Hair_SimpleParted
+             */
+            hair?: string | null;
+            /** @example Eyebrows_Regular */
+            eyebrows?: string | null;
+            /** @example Hair_Beard */
+            beard?: string | null;
+            /** @example Male_Peasant_Body */
+            outfitBody: string;
+            /** @example Male_Peasant_Arms */
+            outfitArms: string;
+            /** @example Male_Peasant_Legs */
+            outfitLegs: string;
+            /** @example Male_Peasant_Feet */
+            outfitFeet: string;
+            /**
+             * @description Capuz/chapéu. Nulo = cabeça descoberta.
+             * @example Male_Ranger_Head_Hood
+             */
+            outfitHead?: string | null;
+            /** @example Male_Ranger_Acc_Pauldron */
+            outfitAccessory?: string | null;
+            notes?: string | null;
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
         Npc: {
             id: number;
             /** @example NPC-001 */
@@ -6748,8 +7067,6 @@ export interface components {
             baseCaptureRate: number;
             captureRatePerLevel: number;
             maxLevel: number;
-            combatBuffBase: number;
-            combatBuffPerLevel: number;
             notes: string | null;
             /** Format: date-time */
             createdAt: string;
@@ -6781,16 +7098,6 @@ export interface components {
                 captureRatePerLevel: number;
                 /** @example 30 */
                 maxLevel?: number;
-                /**
-                 * @description Placeholder — magnitude do buff de combate no nível 1, não-final.
-                 * @example 5
-                 */
-                combatBuffBase?: number;
-                /**
-                 * @description Placeholder — incremento do buff de combate por nível, não-final.
-                 * @example 0.3
-                 */
-                combatBuffPerLevel?: number;
                 notes?: string | null;
             }[];
             /**
@@ -6828,16 +7135,6 @@ export interface components {
             captureRatePerLevel: number;
             /** @example 30 */
             maxLevel?: number;
-            /**
-             * @description Placeholder — magnitude do buff de combate no nível 1, não-final.
-             * @example 5
-             */
-            combatBuffBase?: number;
-            /**
-             * @description Placeholder — incremento do buff de combate por nível, não-final.
-             * @example 0.3
-             */
-            combatBuffPerLevel?: number;
             notes?: string | null;
             /**
              * @description Por que a mudança está sendo feita. Vai para o changelog.

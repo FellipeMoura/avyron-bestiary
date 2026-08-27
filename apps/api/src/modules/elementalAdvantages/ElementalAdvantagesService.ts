@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@bestiary/db";
 import type { Database } from "@bestiary/db";
 import { recordChange } from "../../shared/services/changelog";
@@ -95,7 +95,11 @@ export const elementalAdvantagesService = {
             schema.elementalAdvantages.attackerElementId,
             schema.elementalAdvantages.defenderElementId,
           ],
-          set: { multiplier: schema.elementalAdvantages.multiplier, updatedAt: new Date() },
+          // `excluded` is the proposed row. Naming the table column here renders
+          // `SET multiplier = <table>.multiplier`, rewriting the old row with itself: the
+          // batch inserts what is new and silently ignores everything that already
+          // existed, while the changelog records that it updated.
+          set: { multiplier: sql`excluded.multiplier`, updatedAt: new Date() },
         })
         .returning({ id: schema.elementalAdvantages.id });
       const ids = inserted.map((r) => r.id);

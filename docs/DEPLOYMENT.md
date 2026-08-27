@@ -117,7 +117,7 @@ cd /srv/bestiary/current
 git fetch --tags && git reset --hard origin/main
 pnpm install --frozen-lockfile
 pnpm build                             # web + api
-pnpm db:migrate                        # drizzle-kit, transacional
+pnpm db:migrate                        # uma transacao por arquivo (ver packages/db/src/runMigrations.ts)
 pm2 reload ecosystem.config.cjs --update-env
 # healthcheck retry
 for i in {1..10}; do

@@ -22,6 +22,7 @@
     "models:optimize": "node scripts/optimize-models.mjs",
     "models:placeholders": "node scripts/convert-placeholders.mjs",
     "models:biomes": "node scripts/convert-biomes.mjs",
+    "models:characters": "node scripts/convert-characters.mjs",
     "badges:optimize": "node scripts/optimize-badges.mjs",
     "db:reset": "pnpm db:create && pnpm db:generate && pnpm db:migrate && pnpm db:seed",
     "openapi:generate": "pnpm --filter @bestiary/web run openapi:generate",
