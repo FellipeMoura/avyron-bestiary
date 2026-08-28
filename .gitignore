@@ -19,10 +19,6 @@ fontes/*.xlsx
 # The shipped models live in apps/web/public/models/.
 apps/web/.model-backups/
 
-# Pristine PNG badge art before the square-canvas/webp pass. The shipped
-# badges live in apps/web/public/ as ELE-*.webp / CLS-*.webp.
-apps/web/.badge-backups/
-
 .vscode/
 .idea/
 .DS_Store
