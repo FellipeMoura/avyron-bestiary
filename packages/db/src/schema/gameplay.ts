@@ -5,6 +5,7 @@ import { creatures } from "./creatures";
 import { creatureClasses } from "./creatureClasses";
 import { elements } from "./elements";
 import { biomes, gameMaps } from "./gameMaps";
+import { glyphs } from "./glyphs";
 import { timestamps } from "./timestamps";
 
 export const abilities = pgTable("abilities", {
@@ -104,6 +105,54 @@ export const npcAppearances = pgTable("npc_appearances", {
 
 export type NpcAppearance = typeof npcAppearances.$inferSelect;
 export type NewNpcAppearance = typeof npcAppearances.$inferInsert;
+
+/**
+ * What an arena duel actually is — 1:1 child of an NPC with `role = duelist`,
+ * same shape `npc_appearances` has to the same parent.
+ *
+ * These three values lived as constants in the Godot repo
+ * (`WorldPopulator.ARENA_OPPONENT_CODE/_LEVEL/_GRANTS_GLYPH`), and the level
+ * among them is a balancing number, which rule 1 of that repo says never
+ * belongs in code. The justification there was that a single arena is not
+ * worth a table; with an arena per map that stops being true.
+ *
+ * **`grants_glyph_id` is nullable and UNIQUE, and both matter.** Nullable
+ * because every map has an arena but only the last arena of an era grants the
+ * Glifo — an intermediate arena is a real duel with its own reward, not a
+ * gate. Unique because a Glifo is granted by exactly one arena; two arenas
+ * pointing at the same one would let a player skip the intended crossing, and
+ * nothing downstream would notice. Postgres treats NULLs as distinct, so the
+ * many glyph-less arenas coexist under the same constraint.
+ *
+ * `opponent_level` is bounded here only against nonsense; the real ceiling is
+ * `combat_rules.level_max`, which a CHECK cannot reach across tables — the
+ * export is what enforces it.
+ */
+export const npcDuelists = pgTable(
+  "npc_duelists",
+  {
+    id: serial("id").primaryKey(),
+    npcId: integer("npc_id")
+      .notNull()
+      .unique()
+      .references(() => npcs.id, { onDelete: "cascade" }),
+    opponentCreatureId: integer("opponent_creature_id")
+      .notNull()
+      .references(() => creatures.id),
+    opponentLevel: integer("opponent_level").notNull(),
+    grantsGlyphId: integer("grants_glyph_id")
+      .unique()
+      .references(() => glyphs.id),
+    notes: text("notes"),
+    ...timestamps,
+  },
+  (t) => ({
+    levelRange: check("npc_duelists_level_range", sql`${t.opponentLevel} >= 1`),
+  }),
+);
+
+export type NpcDuelist = typeof npcDuelists.$inferSelect;
+export type NewNpcDuelist = typeof npcDuelists.$inferInsert;
 
 /**
  * What a merchant carries. Junction npc × item with upsert semantics, same

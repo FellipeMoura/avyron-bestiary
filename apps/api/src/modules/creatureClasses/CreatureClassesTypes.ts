@@ -1,12 +1,33 @@
 import { z } from "../../shared/openapi/zod";
 import { changeMetadataSchema, paginationSchema } from "../../shared/services/query";
 
+/**
+ * The five stats a class may specialise in.
+ *
+ * Deliberately the same five keys the game already uses (`creature_stats`
+ * minus the `base` prefix, and exactly what `stats_at_level` returns). The
+ * player-facing labels differ — `speed` shows as "Velocidade de Ataque",
+ * `charge` as "Stamina" — and that split is the normal one here: enum in
+ * English, label in Portuguese. Inventing `attackSpeed`/`stamina` tokens
+ * would have meant a translation table between the class and the stat it
+ * modifies.
+ */
+export const PRIMARY_STATS = ["hp", "attack", "defense", "speed", "charge"] as const;
+
+const primaryStatSchema = z.enum(PRIMARY_STATS, {
+  errorMap: () => ({
+    message: `primaryStat must be one of: ${PRIMARY_STATS.join(", ")}`,
+  }),
+});
+
 export const CreatureClassSchema = z
   .object({
     id: z.number().int(),
     code: z.string().openapi({ example: "CLS-001" }),
     name: z.string(),
-    biologicalScope: z.string().nullable(),
+    primaryStat: primaryStatSchema.nullable(),
+    primaryStatBonusPct: z.number(),
+    description: z.string().nullable(),
     passive: z.string().nullable(),
     workFunction: z.string().nullable(),
     fusionRule: z.string().nullable(),
@@ -16,14 +37,19 @@ export const CreatureClassSchema = z
   })
   .openapi("CreatureClass", {
     description:
-      "Biological lineage. Classes do NOT influence combat — hard rule from Changelog 0.01.",
+      "Gameplay specialisation, NOT a biological lineage — taxonomy is independent of class "
+      + "since 2026-08. Each class boosts exactly one stat (`primaryStat`) by "
+      + "`primaryStatBonusPct`. There is still no CLS×CLS advantage matrix: no value here ever "
+      + "depends on the opposing class.",
   });
 
 export const CREATURE_CLASS_FIELDS = [
   "id",
   "code",
   "name",
-  "biologicalScope",
+  "primaryStat",
+  "primaryStatBonusPct",
+  "description",
   "passive",
   "workFunction",
   "fusionRule",
@@ -43,7 +69,21 @@ export const CodeParamsSchema = z.object({
 const coreSchema = z.object({
   code: z.string().min(3).max(16),
   name: z.string().min(1).max(64),
-  biologicalScope: z.string().max(500).nullish(),
+  primaryStat: primaryStatSchema.openapi({ example: "defense" }),
+  /**
+   * Percentage points, not a multiplier: `20` is +20%. Same convention as
+   * `relic_rules.sameClassBonusPct`. Zero is legal (a class deliberately
+   * tuned flat); negative is not.
+   */
+  primaryStatBonusPct: z
+    .number()
+    .min(0, { message: "primaryStatBonusPct must be >= 0 (percentage points, 20 means +20%)" })
+    .openapi({ example: 20 }),
+  description: z
+    .string()
+    .min(1, { message: "description must not be empty" })
+    .max(500)
+    .openapi({ example: "Especialistas em Defesa. Criaturas resistentes…" }),
   passive: z.string().max(500).nullish(),
   workFunction: z.string().max(500).nullish(),
   fusionRule: z.string().max(500).nullish(),

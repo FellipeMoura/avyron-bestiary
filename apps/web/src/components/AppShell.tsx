@@ -3,7 +3,9 @@ import { cn } from "../lib/cn";
 
 const links = [
   { to: "/bestiary", label: "Bestiário", code: "CRT" },
+  { to: "/maps", label: "Mapas", code: "MAP" },
   { to: "/items", label: "Itens", code: "ITM" },
+  { to: "/equipment", label: "Equipamentos", code: "EQP" },
   { to: "/elements", label: "Elementos", code: "ELE" },
   { to: "/documents", label: "Documentos", code: "DOC" },
   { to: "/changelog", label: "Histórico", code: "LOG" },

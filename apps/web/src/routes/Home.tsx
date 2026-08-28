@@ -41,12 +41,18 @@ export function Home() {
         />
       </section>
 
-      <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5">
         <Card
           to="/bestiary"
           code="CRT"
           title="Bestiário"
           desc="Filtre criaturas por era, classe e elemento."
+        />
+        <Card
+          to="/maps"
+          code="MAP"
+          title="Mapas"
+          desc="A travessia de cada mapa, o chão que cada bioma ocupa e o que a passagem cobra."
         />
         <Card
           to="/items"

@@ -20,6 +20,7 @@ export const TABLES: readonly string[] = [
   "creature_classes",
   "biomes",
   "game_maps",
+  "glyphs",
   "items",
   "design_documents",
   "changelog",
@@ -27,6 +28,8 @@ export const TABLES: readonly string[] = [
   // Junções e catálogo com FK.
   "elemental_advantages",
   "map_biomes",
+  "map_connections",
+  "map_biome_regions",
   "npcs",
   "creatures",
   "abilities",
@@ -36,7 +39,10 @@ export const TABLES: readonly string[] = [
   "mining_rates",
   "merchant_offers",
   "npc_appearances",
+  "npc_duelists",
   "relics",
+  "equipment",
+  "equipment_recipes",
 
   // Camada de números — o que o jogo executa.
   "creature_stats",
@@ -49,6 +55,7 @@ export const TABLES: readonly string[] = [
   "progression_rules",
   "relic_stats",
   "relic_rules",
+  "equipment_stats",
 ];
 
 /**

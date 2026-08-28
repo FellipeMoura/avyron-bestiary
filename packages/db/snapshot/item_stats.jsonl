@@ -9,10 +9,14 @@
 {"id":9,"item_id":9,"value":150,"effect_code":"none","effect_value":0,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
 {"id":10,"item_id":10,"value":150,"effect_code":"none","effect_value":0,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
 {"id":11,"item_id":11,"value":150,"effect_code":"none","effect_value":0,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
-{"id":12,"item_id":12,"value":150,"effect_code":"none","effect_value":0,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
 {"id":16,"item_id":16,"value":80,"effect_code":"heal_percent","effect_value":30,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
 {"id":17,"item_id":17,"value":220,"effect_code":"heal_percent","effect_value":70,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
 {"id":18,"item_id":18,"value":600,"effect_code":"heal_percent","effect_value":100,"notes":null,"created_at":"2026-08-08T03:00:46.521Z","updated_at":"2026-08-08T03:00:46.521Z"}
 {"id":19,"item_id":19,"value":0,"effect_code":"none","effect_value":0,"notes":"Material de progressão: não é mercadoria. Sem oferta de comerciante e sem valor de venda, para não competir com a renda de mineração.","created_at":"2026-08-10T11:10:13.951Z","updated_at":"2026-08-10T11:10:13.951Z"}
 {"id":20,"item_id":20,"value":0,"effect_code":"none","effect_value":0,"notes":"Material de progressão: não é mercadoria.","created_at":"2026-08-10T11:10:13.951Z","updated_at":"2026-08-10T11:10:13.951Z"}
 {"id":21,"item_id":21,"value":0,"effect_code":"none","effect_value":0,"notes":"Material de progressão: não é mercadoria.","created_at":"2026-08-10T11:10:13.951Z","updated_at":"2026-08-10T11:10:13.951Z"}
+{"id":22,"item_id":22,"value":0,"effect_code":"none","effect_value":0,"notes":null,"created_at":"2026-08-27T20:26:55.436Z","updated_at":"2026-08-27T20:26:55.436Z"}
+{"id":23,"item_id":23,"value":0,"effect_code":"none","effect_value":0,"notes":null,"created_at":"2026-08-27T20:26:55.526Z","updated_at":"2026-08-27T20:26:55.526Z"}
+{"id":24,"item_id":24,"value":20,"effect_code":"none","effect_value":0,"notes":null,"created_at":"2026-08-28T20:58:39.094Z","updated_at":"2026-08-28T20:58:39.094Z"}
+{"id":25,"item_id":25,"value":30,"effect_code":"none","effect_value":0,"notes":null,"created_at":"2026-08-28T20:58:39.094Z","updated_at":"2026-08-28T20:58:39.094Z"}
+{"id":26,"item_id":26,"value":60,"effect_code":"none","effect_value":0,"notes":null,"created_at":"2026-08-28T20:58:39.094Z","updated_at":"2026-08-28T20:58:39.094Z"}

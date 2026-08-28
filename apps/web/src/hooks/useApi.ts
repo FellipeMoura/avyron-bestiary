@@ -142,6 +142,71 @@ export function useBiomes() {
   });
 }
 
+/**
+ * Quais biomas pertencem a cada mapa. É por aqui que a ficha descobre em que
+ * chão a criatura pode ser posta para minerar — `creatures.biome_id` é
+ * anotação de catálogo, não viaja no bundle e não serve para essa conta.
+ */
+export function useMapBiomes() {
+  return useQuery({
+    queryKey: ["map-biomes", "list"],
+    queryFn: async () =>
+      unwrap(await api.GET("/map-biomes", { params: { query: { limit: 200, offset: 0 } } })),
+  });
+}
+
+/**
+ * Onde cada bioma fica DENTRO do mapa — a partição espacial que
+ * `WorldRoot.DEFAULT_BIOME` ainda substitui no jogo.
+ *
+ * Não é a mesma pergunta que `map_biomes` responde. A junção diz quais
+ * biomas o mapa tem e em que ordem a travessia os apresenta; a região diz que
+ * chão cada um ocupa. Um bioma pode estar na travessia sem ter região nenhuma
+ * — e a tela de mapas precisa dizer isso em voz alta, porque nesse estado ele
+ * existe no catálogo e não existe no terreno.
+ */
+export function useMapBiomeRegions() {
+  return useQuery({
+    queryKey: ["map-biome-regions", "list"],
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/map-biome-regions", {
+          params: { query: { limit: 500, offset: 0 } },
+        }),
+      ),
+  });
+}
+
+/** Quem leva a quem, e a que preço. `requiredGlyphId` nulo = passagem livre. */
+export function useMapConnections() {
+  return useQuery({
+    queryKey: ["map-connections", "list"],
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/map-connections", { params: { query: { limit: 200, offset: 0 } } }),
+      ),
+  });
+}
+
+export function useGlyphs() {
+  return useQuery({
+    queryKey: ["glyphs", "list"],
+    queryFn: async () =>
+      unwrap(await api.GET("/glyphs", { params: { query: { limit: 100, offset: 0 } } })),
+  });
+}
+
+/** A arena de cada mapa: oponente, nível e o Glifo que a vitória concede. */
+export function useNpcDuelists() {
+  return useQuery({
+    queryKey: ["npc-duelists", "list"],
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/npc-duelists", { params: { query: { limit: 200, offset: 0 } } }),
+      ),
+  });
+}
+
 // ---------- items ----------
 export function useItems(category?: "mineral" | "capture" | "heal" | "material") {
   return useQuery({
@@ -191,6 +256,167 @@ export function useMerchantOffers() {
     queryFn: async () =>
       unwrap(
         await api.GET("/merchant-offers", { params: { query: { limit: 500, offset: 0 } } }),
+      ),
+  });
+}
+
+// ---------- creature numbers ----------
+
+/**
+ * A camada de números do elenco inteiro, não só a da criatura aberta.
+ *
+ * A ficha desenha barra, e barra sem escala mente: 55 de defesa é muito ou
+ * pouco depende do resto do elenco. Puxar a lista toda numa chamada é o que
+ * permite medir cada stat contra o teto do elenco em vez de contra um máximo
+ * inventado em código. A tabela é 1:1 com `creatures` — cabe folgado.
+ */
+export function useCreatureStats() {
+  return useQuery({
+    queryKey: ["creature-stats", "list"],
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/creature-stats", { params: { query: { limit: 500, offset: 0 } } }),
+      ),
+  });
+}
+
+export function useCaptureRule(creatureCode: string | undefined) {
+  return useQuery({
+    queryKey: ["capture-rules", "by-creature", creatureCode],
+    enabled: !!creatureCode,
+    queryFn: async () => {
+      const rows = unwrap(
+        await api.GET("/capture-rules", {
+          params: { query: { creatureCode: creatureCode! } },
+        }),
+      );
+      return rows[0] ?? null;
+    },
+  });
+}
+
+export function useCreatureAbilityLinks(creatureCode: string | undefined) {
+  return useQuery({
+    queryKey: ["creature-abilities", "by-creature", creatureCode],
+    enabled: !!creatureCode,
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/creature-abilities", {
+          params: { query: { limit: 200, offset: 0, creatureCode: creatureCode! } },
+        }),
+      ),
+  });
+}
+
+export function useDrops(creatureCode: string | undefined) {
+  return useQuery({
+    queryKey: ["drops", "by-creature", creatureCode],
+    enabled: !!creatureCode,
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/drops", {
+          params: { query: { limit: 200, offset: 0, creatureCode: creatureCode! } },
+        }),
+      ),
+  });
+}
+
+// ---------- abilities ----------
+export function useAbilities() {
+  return useQuery({
+    queryKey: ["abilities", "list"],
+    queryFn: async () =>
+      unwrap(await api.GET("/abilities", { params: { query: { limit: 500, offset: 0 } } })),
+  });
+}
+
+export function useAbilityStats() {
+  return useQuery({
+    queryKey: ["ability-stats", "list"],
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/ability-stats", { params: { query: { limit: 500, offset: 0 } } }),
+      ),
+  });
+}
+
+// ---------- relics ----------
+export function useRelics() {
+  return useQuery({
+    queryKey: ["relics", "list"],
+    queryFn: async () =>
+      unwrap(await api.GET("/relics", { params: { query: { limit: 200, offset: 0 } } })),
+  });
+}
+
+export function useRelicStats() {
+  return useQuery({
+    queryKey: ["relic-stats", "list"],
+    queryFn: async () =>
+      unwrap(await api.GET("/relic-stats", { params: { query: { limit: 200, offset: 0 } } })),
+  });
+}
+
+export function useRelicRules() {
+  return useQuery({
+    queryKey: ["relic-rules", "singleton"],
+    queryFn: async () => unwrap(await api.GET("/relic-rules")),
+  });
+}
+
+// ---------- global tuning (singletons) ----------
+/**
+ * Amplificador e Encantador — o resto do set do domador (documento
+ * `equipamentos`). Três consultas porque são três tabelas, e a tela mostra
+ * as três juntas: modelo, números e receita.
+ */
+export function useEquipment() {
+  return useQuery({
+    queryKey: ["equipment", "list"],
+    queryFn: async () =>
+      unwrap(await api.GET("/equipment", { params: { query: { limit: 200, offset: 0 } } })),
+  });
+}
+
+export function useEquipmentStats() {
+  return useQuery({
+    queryKey: ["equipment-stats", "list"],
+    queryFn: async () =>
+      unwrap(await api.GET("/equipment-stats", { params: { query: { limit: 200, offset: 0 } } })),
+  });
+}
+
+export function useEquipmentRecipes() {
+  return useQuery({
+    queryKey: ["equipment-recipes", "list"],
+    queryFn: async () =>
+      unwrap(await api.GET("/equipment-recipes", { params: { query: { limit: 500, offset: 0 } } })),
+  });
+}
+
+export function useCombatRules() {
+  return useQuery({
+    queryKey: ["combat-rules", "singleton"],
+    queryFn: async () => unwrap(await api.GET("/combat-rules")),
+  });
+}
+
+export function useProgressionRules() {
+  return useQuery({
+    queryKey: ["progression-rules", "singleton"],
+    queryFn: async () => unwrap(await api.GET("/progression-rules")),
+  });
+}
+
+// ---------- elemental advantages ----------
+export function useElementalAdvantages() {
+  return useQuery({
+    queryKey: ["elemental-advantages", "list"],
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/elemental-advantages", {
+          params: { query: { limit: 200, offset: 0 } },
+        }),
       ),
   });
 }

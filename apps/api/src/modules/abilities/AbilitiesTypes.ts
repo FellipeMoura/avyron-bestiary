@@ -54,6 +54,9 @@ export const CreatedResponseSchema = z.object({ code: z.string(), version: z.str
 export const UpdatedResponseSchema = z.object({ code: z.string(), version: z.string() }).openapi("UpdatedResponse");
 export const BatchCreatedResponseSchema = z.object({ codes: z.array(z.string()), version: z.string() }).openapi("BatchCreatedResponse");
 
+export const DeleteAbilityBodySchema = changeMetadataSchema.openapi("DeleteAbilityBody");
+
 export type CreateAbilityBody = z.infer<typeof CreateAbilityBodySchema>;
+export type DeleteAbilityBody = z.infer<typeof DeleteAbilityBodySchema>;
 export type UpdateAbilityBody = z.infer<typeof UpdateAbilityBodySchema>;
 export type BatchCreateAbilitiesBody = z.infer<typeof BatchCreateAbilitiesBodySchema>;

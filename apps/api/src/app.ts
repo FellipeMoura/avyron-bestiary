@@ -25,14 +25,21 @@ import { dropsRouter } from "./modules/drops/DropsRoutes.js";
 import { elementalAdvantagesRouter } from "./modules/elementalAdvantages/ElementalAdvantagesRoutes.js";
 import { economyRulesRouter } from "./modules/economyRules/EconomyRulesRoutes.js";
 import { elementsRouter } from "./modules/elements/ElementsRoutes.js";
+import { equipmentRouter } from "./modules/equipment/EquipmentRoutes.js";
+import { equipmentRecipesRouter } from "./modules/equipmentRecipes/EquipmentRecipesRoutes.js";
+import { equipmentStatsRouter } from "./modules/equipmentStats/EquipmentStatsRoutes.js";
 import { gameMapsRouter } from "./modules/gameMaps/GameMapsRoutes.js";
+import { glyphsRouter } from "./modules/glyphs/GlyphsRoutes.js";
 import { itemStatsRouter } from "./modules/itemStats/ItemStatsRoutes.js";
 import { itemsRouter } from "./modules/items/ItemsRoutes.js";
+import { mapBiomeRegionsRouter } from "./modules/mapBiomeRegions/MapBiomeRegionsRoutes.js";
 import { mapBiomesRouter } from "./modules/mapBiomes/MapBiomesRoutes.js";
+import { mapConnectionsRouter } from "./modules/mapConnections/MapConnectionsRoutes.js";
 import { merchantOffersRouter } from "./modules/merchantOffers/MerchantOffersRoutes.js";
 import { miningRatesRouter } from "./modules/miningRates/MiningRatesRoutes.js";
 import { missionsRouter } from "./modules/missions/MissionsRoutes.js";
 import { npcAppearancesRouter } from "./modules/npcAppearances/NpcAppearancesRoutes.js";
+import { npcDuelistsRouter } from "./modules/npcDuelists/NpcDuelistsRoutes.js";
 import { npcsRouter } from "./modules/npcs/NpcsRoutes.js";
 import { progressionRulesRouter } from "./modules/progressionRules/ProgressionRulesRoutes.js";
 import { relicsRouter } from "./modules/relics/RelicsRoutes.js";
@@ -87,6 +94,9 @@ export function createApp() {
   v1.use("/maps", gameMapsRouter);
   v1.use("/biomes", biomesRouter);
   v1.use("/map-biomes", mapBiomesRouter);
+  v1.use("/map-biome-regions", mapBiomeRegionsRouter);
+  v1.use("/map-connections", mapConnectionsRouter);
+  v1.use("/glyphs", glyphsRouter);
   v1.use("/abilities", abilitiesRouter);
   // Numbers layer — everything the Godot build needs to run a battle.
   v1.use("/combat-rules", combatRulesRouter);
@@ -102,8 +112,13 @@ export function createApp() {
   v1.use("/relics", relicsRouter);
   v1.use("/relic-stats", relicStatsRouter);
   v1.use("/relic-rules", relicRulesRouter);
+  // Resto do set do domador — peças passivas de combate, fabricadas de minério.
+  v1.use("/equipment", equipmentRouter);
+  v1.use("/equipment-stats", equipmentStatsRouter);
+  v1.use("/equipment-recipes", equipmentRecipesRouter);
   v1.use("/npcs", npcsRouter);
   v1.use("/npc-appearances", npcAppearancesRouter);
+  v1.use("/npc-duelists", npcDuelistsRouter);
   v1.use("/merchant-offers", merchantOffersRouter);
   v1.use("/missions", missionsRouter);
   v1.use("/drops", dropsRouter);

@@ -31,16 +31,22 @@ Dois repositórios irmãos:
   (`pnpm game:export`). Não lê o banco diretamente.
 
 ## Regras de domínio fechadas (não propor mudar sem motivo forte)
-- **3 linhagens biológicas, elenco fechado:** Loricati (artrópodes),
-  Theria (sinapsídeos, a linhagem que leva aos mamíferos), Draconis
-  (sauropsídeos — répteis, dinossauros, aves). Criatura que não cabe em
-  nenhuma não entra no jogo.
-- **Classes NÃO influenciam combate.** Regra travada (Changelog 0.01) — sem
-  matriz de vantagem tipo CLS×CLS. Classe entrega valor por outros sistemas
-  (mineração, montaria, fusão, e agora Relicário — equipamento que pode dar
-  bônus ligado à classe, mas a ligação mora no equipamento, não na classe).
-- **6 elementos em anel fechado:** Água → Fogo → Natureza → Terra → Gelo →
-  Eletricidade → Água (seta = vence). Vantagem 2.0x, desvantagem 0.5x, resto
+- **5 classes, elenco fechado, e classe é especialização de ATRIBUTO — não
+  linhagem.** Cada classe declara um `primaryStat` (um dos cinco stats do
+  jogo) e um bônus percentual sobre ele. Foram 3 linhagens biológicas até
+  agosto de 2026; o acoplamento entre taxonomia e gameplay travava o elenco
+  e foi desfeito. **Taxonomia é independente:** criatura de qualquer
+  linhagem pode receber qualquer classe, e não existe validação que ligue
+  clado a classe. Quais classes existem e o que cada uma especializa:
+  `GET /creature-classes` — não presuma pela memória.
+- **A classe engrossa o próprio stat; não existe matchup CLS×CLS.** Regra
+  do Changelog 0.01, com a formulação corrigida em 2026-08. O bônus é plano
+  e igual contra qualquer adversário; nenhum valor depende da classe do
+  oponente, e não existe ciclo entre classes como o anel elemental. O
+  Relicário segue igual: equipamento pode dar bônus de captura ligado à
+  classe, mas a ligação mora no equipamento.
+- **5 elementos em anel fechado:** Água → Fogo → Natureza → Terra →
+  Eletricidade → Água (seta = vence). Gelo foi removido em agosto de 2026. Vantagem 2.0x, desvantagem 0.5x, resto
   neutro. Simetria perfeita é o ponto — nenhum elemento é objetivamente
   melhor.
 - **Despertar Ancestral** — transformação temporária em combate (3 turnos),
@@ -55,10 +61,14 @@ Dois repositórios irmãos:
 
 ## Estado atual do roster (pode estar desatualizado — pergunte se importa)
 31 criaturas, todas no primeiro submapa de Aetheris (PZ-01 "Aetheris I —
-Mundo dos Mares"): 15 Loricati, 8 Theria, 8 Draconis. Cobertura de
-Despertar é 1:1 (uma por criatura). Só 1 dos 6 elementos (Gelo) ainda não
-tem nenhum representante — lacuna consciente, reservada pra eras
-seguintes. PZ-02 ("Aetheris II — Conquista das Margens") e PZ-03
+Mundo dos Mares"). A distribuição por classe é derivada — conte com
+`GET /creatures?classCode=...`, não transcreva. Note que as criaturas
+herdaram a classe da linhagem antiga e a reclassificação por
+especialização ainda não foi feita, então a distribuição atual reflete
+taxonomia, não gameplay. Cobertura de
+Despertar é 1:1 (uma por criatura). Os 5 elementos têm representante — a
+lacuna que existia era Gelo, e ela foi resolvida removendo o elemento em
+vez de preenchendo-o. PZ-02 ("Aetheris II — Conquista das Margens") e PZ-03
 ("Aetheris III — Domínio Terrestre") já existem como mapas formalizados,
 mas ainda sem nenhuma criatura associada.
 
@@ -87,10 +97,12 @@ consistência de mundo — não arquitetura técnica.
   a referência paleontológica são as classes e as eras.
 - **Três eras**, nomes de exibição diferentes do enum técnico:
   Aetheris (era paleozoica), Titanor (mesozoica), Novaterra (cenozoica).
-- **Três classes/linhagens**, nomes de exibição:
-  Loricati (de "lorica", couraça do legionário romano — artrópodes),
-  Theria (clado real dos mamíferos e afins — sinapsídeos),
-  Draconis (de "draco", dragão — répteis/sauropsídeos).
+- **Cinco classes**, nomes de exibição ficcionais e **sem significado
+  linguístico real** — não são latim, não são clado, e não devem ser
+  interpretados etimologicamente. Os nomes antigos eram derivados (lorica,
+  Theria, draco) e isso os fazia prometer taxonomia, que é exatamente o
+  vínculo que a refatoração de 2026-08 desfez. Quais são e o que cada uma
+  especializa: `GET /creature-classes`.
 - As criaturas em si não têm nome de espécie-fantasia — usamos "criaturas"
   mesmo, deliberadamente neutro, pra deixar o peso de identidade nos nomes
   de classe e era.
@@ -166,7 +178,7 @@ conversar com esse estilo, não competir com ele.
 - **Pendências que essa rodada deliberadamente não fechou:** pesos de
   mineração por classe × bioma (ainda todos zerados/pendentes fora de
   BIO-001), e a atribuição de cada criatura a um dos 12 biomas novos —
-  só 9 das 31 criaturas têm bioma (todas em Mar raso, Loricati
+  só 9 das 31 criaturas têm bioma (todas em Mar raso, artrópodes
   aquáticos). As outras 22 estão no mapa PZ-01 mas ainda sem bioma
   designado; nenhuma criatura foi movida para PZ-02/PZ-03.
 
@@ -186,7 +198,7 @@ conversar com esse estilo, não competir com ele.
   exploração, não afeta combate.
 
 ## Anel elemental (pra pensar coerência bioma × elemento)
-Água → Fogo → Natureza → Terra → Gelo → Eletricidade → Água (seta =
+Água → Fogo → Natureza → Terra → Eletricidade → Água (seta =
 vence). Cada elemento tem uma banda de cor no padrão visual das
 criaturas — use como referência de paleta, não como regra rígida:
 - Fogo: ocres, terracotas, marrom-queimado (acento laranja-brasa em
@@ -196,7 +208,6 @@ criaturas — use como referência de paleta, não como regra rígida:
 - Terra: marrons, ferrugem, arenito, ocre-claro
 - Eletricidade: cinza-chumbo, azul-arco, prata fosca (acento
   laranja-brasa em detalhes)
-- Gelo: azul-glacial, branco-osso, cinza-cristal
 
 ## Direção visual geral
 "Arquivo científico dark editorial" — prancha zoológica moderna com

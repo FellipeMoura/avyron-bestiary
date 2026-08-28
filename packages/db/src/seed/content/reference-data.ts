@@ -35,29 +35,43 @@ const ELEMENTS = [
 ] as const;
 
 /**
- * Display names are the in-world ones (see the `nomenclatura` document); the
- * real lineage lives in `biologicalScope` so it stays discoverable. Keeping
- * these in sync with the API matters: `upsertClass` below overwrites `name`
- * on rows that already exist, so stale values here would silently revert a
- * rename on the next bootstrap.
+ * The three rows this frozen bootstrap has always owned, kept current on
+ * purpose: `upsertClass` below overwrites `name` on rows that already exist,
+ * so a stale value here silently reverts a rename on the next bootstrap. When
+ * the classes stopped being lineages in 2026-08 these three were renamed
+ * through the API, and this list had to follow or `pnpm db:reset` would have
+ * put Loricati/Theria/Draconis back.
+ *
+ * **CLS-004 and CLS-005 are deliberately absent.** They were created through
+ * the API, which is where content belongs; adding them here would be a new
+ * content batch in a frozen seed, with no changelog and no version. A machine
+ * bootstrapped from `db:reset` gets three classes and an incomplete catalog —
+ * which is what `db:reset` has always meant. `pnpm db:restore` is the command
+ * that hydrates a real catalog.
  */
 const CLASSES = [
   {
     code: "CLS-001",
-    name: "Loricati",
-    biologicalScope: "Artropodes: insetos, aracnideos, crustaceos, euripterideos",
+    name: "Arambi",
+    primaryStat: "defense",
+    description:
+      "Especialistas em Defesa. Criaturas resistentes, blindadas ou protegidas por couracas e estruturas defensivas.",
     status: "Definida",
   },
   {
     code: "CLS-002",
-    name: "Theria",
-    biologicalScope: "Sinapsideos: linhagem que leva aos mamiferos",
+    name: "Kaira",
+    primaryStat: "attack",
+    description:
+      "Especialistas em Ataque. Criaturas voltadas a ofensiva, predacao e dano direto.",
     status: "Definida",
   },
   {
     code: "CLS-003",
-    name: "Draconis",
-    biologicalScope: "Sauropsideos: repteis, dinossauros, aves",
+    name: "Yaruki",
+    primaryStat: "speed",
+    description:
+      "Especialistas em Velocidade de Ataque. Criaturas rapidas, ageis e capazes de atacar em alta frequencia.",
     status: "Definida",
   },
 ] as const;
@@ -114,7 +128,7 @@ async function upsertClass(tx: Tx, row: (typeof CLASSES)[number]): Promise<numbe
       .update(schema.creatureClasses)
       .set({
         name: row.name,
-        biologicalScope: row.biologicalScope,
+        primaryStat: row.primaryStat,
         status: row.status,
         updatedAt: new Date(),
       })

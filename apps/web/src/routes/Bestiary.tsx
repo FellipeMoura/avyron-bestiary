@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { CodeIcon } from "../components/CodeIcon";
 import { Filter } from "../components/Filter";
 import {
   useCreatureClasses,
@@ -9,7 +10,7 @@ import {
   useSyncModels,
 } from "../hooks/useApi";
 import { cn } from "../lib/cn";
-import { ERA_LABEL, plural } from "../lib/labels";
+import { ERA_LABEL, plural, primaryStatLabel } from "../lib/labels";
 
 const ERAS = [
   { value: "", label: "todas as eras" },
@@ -26,6 +27,7 @@ export function Bestiary() {
   const era = params.get("era") ?? "";
   const classCode = params.get("classCode") ?? "";
   const elementCode = params.get("elementCode") ?? "";
+  const mapCode = params.get("mapCode") ?? "";
 
   const classes = useCreatureClasses();
   const elements = useElements();
@@ -34,6 +36,7 @@ export function Bestiary() {
     era: (era || undefined) as "paleozoic" | "mesozoic" | "cenozoic" | undefined,
     classCode: classCode || undefined,
     elementCode: elementCode || undefined,
+    mapCode: mapCode || undefined,
   });
 
   const setFilter = (key: string, value: string) => {
@@ -105,9 +108,12 @@ export function Bestiary() {
           onChange={(v) => setFilter("classCode", v)}
           options={[
             { value: "", label: "todas as classes" },
+            // A especializacao entra no rotulo porque e o que diferencia as
+            // classes agora — sem ela, "CLS-004 · Ambua" nao diz nada a quem
+            // esta filtrando, e o nome e ficcional de proposito.
             ...(classes.data ?? []).map((c) => ({
               value: c.code,
-              label: `${c.code} · ${c.name}`,
+              label: `${c.code} · ${c.name} — ${primaryStatLabel(c.primaryStat)}`,
             })),
           ]}
         />
@@ -121,6 +127,19 @@ export function Bestiary() {
               value: e.code,
               label: `${e.code} · ${e.name}`,
             })),
+          ]}
+        />
+        <Filter
+          label="mapa"
+          value={mapCode}
+          onChange={(v) => setFilter("mapCode", v)}
+          options={[
+            { value: "", label: "todos os mapas" },
+            // Ordenado por `sortOrder`, não por código: a lista é a ordem da
+            // travessia, e é assim que a tela de mapas a apresenta.
+            ...[...(maps.data ?? [])]
+              .sort((a, b) => a.sortOrder - b.sortOrder)
+              .map((m) => ({ value: m.code, label: `${m.code} · ${m.name}` })),
           ]}
         />
         <div className="ml-auto flex items-center gap-3">
@@ -193,15 +212,11 @@ export function Bestiary() {
                 </span>
                 <span className="font-display text-lg text-bone">{c.originalName}</span>
                 <span className="hidden items-center gap-1.5 font-mono text-xs text-bone/70 md:inline-flex">
-                  {rowClassCode && (
-                    <img src={`/${rowClassCode}.webp`} alt="" className="h-5 w-5 shrink-0" />
-                  )}
+                  {rowClassCode && <CodeIcon code={rowClassCode} />}
                   {rowClassCode ?? "—"}
                 </span>
                 <span className="hidden items-center gap-1.5 font-mono text-xs text-bone/70 md:inline-flex">
-                  {rowElementCode && (
-                    <img src={`/${rowElementCode}.webp`} alt="" className="h-5 w-5 shrink-0" />
-                  )}
+                  {rowElementCode && <CodeIcon code={rowElementCode} />}
                   {rowElementCode ?? "—"}
                 </span>
                 <span className="hidden font-mono text-xs text-bone/70 md:inline">

@@ -1,10 +1,11 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@bestiary/db";
 import type { Database } from "@bestiary/db";
+import { AppError } from "../../shared/AppError";
 import { recordChange } from "../../shared/services/changelog";
 import { resolveCodeInTx, resolveOptionalCode } from "../../shared/services/fkResolver";
 import { buildProjection, parseFields } from "../../shared/services/query";
-import type { BatchUpsertDropsBody, UpsertDropBody } from "./DropsTypes";
+import type { BatchUpsertDropsBody, DeleteDropBody, UpsertDropBody } from "./DropsTypes";
 import { DROP_FIELDS } from "./DropsTypes";
 
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
@@ -99,6 +100,54 @@ export const dropsService = {
         entity: "drops",
       });
       return { ids, version };
+    });
+  },
+
+  async remove(body: DeleteDropBody) {
+    return db.transaction(async (tx) => {
+      const [creatureId, itemId] = await Promise.all([
+        resolveCodeInTx(tx, schema.creatures, body.creatureCode, "creatureCode"),
+        resolveCodeInTx(tx, schema.items, body.itemCode, "itemCode"),
+      ]);
+      // `condition` completes the natural key. `eq(col, null)` renders
+      // `= NULL`, which is never true in SQL, so the null case needs `IS NULL`
+      // explicitly — otherwise deleting a drop with no condition would always
+      // 404 while the row sat right there.
+      const condition = body.condition ?? null;
+      const existing = await tx
+        .select({ id: schema.drops.id })
+        .from(schema.drops)
+        .where(
+          and(
+            eq(schema.drops.creatureId, creatureId),
+            eq(schema.drops.itemId, itemId),
+            condition === null
+              ? isNull(schema.drops.condition)
+              : eq(schema.drops.condition, condition),
+          ),
+        )
+        .limit(1);
+      const row = existing[0];
+      if (!row) {
+        throw new AppError(
+          `Creature '${body.creatureCode}' has no drop of item '${body.itemCode}'`
+            + (condition === null
+              ? " without a condition"
+              : ` with condition '${condition}'`),
+          404,
+        );
+      }
+      const version = await recordChange(tx, {
+        change:
+          `Drop removed: creature ${body.creatureCode} no longer drops ${body.itemCode}`
+          + (condition === null ? "" : ` (condition: ${condition})`),
+        reason: body.reason,
+        impact: body.impact,
+        entity: "drops",
+        entityId: row.id,
+      });
+      await tx.delete(schema.drops).where(eq(schema.drops.id, row.id));
+      return { id: row.id, version };
     });
   },
 };

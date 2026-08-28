@@ -70,14 +70,14 @@ $body = @{
   code           = "CRT-028"
   originalName   = "Estemmenosuchus"
   baseSpecies    = "Estemmenosuchus"
-  classCode      = "CLS-002"      # Theria
+  classCode      = "CLS-002"      # Kaira, especialista em ataque
   elementCode    = "ELE-004"      # Terra
   mapCode        = "PZ-01"
   biomeCode      = $null
   role           = "hero"
   silhouetteNote = "Protuberancias osseas no cranio em forma de leque; corpo macico quadrupede."
   status         = "Rascunho"
-  reason         = "Preencher lacuna de Theria pesado no fim do PZ-01"
+  reason         = "Preencher lacuna de predador pesado no fim do PZ-01"
   impact         = "Habilita encontro de chefe no bioma vulcanico"
 } | ConvertTo-Json
 
@@ -171,10 +171,10 @@ Dois passos: a habilidade e os números dela.
 
 ```powershell
 $body = @{
-  code = "HAB-032"; name = "Avalanche"; elementCode = "ELE-006"
+  code = "HAB-032"; name = "Tremor"; elementCode = "ELE-004"
   type = "Ataque"; effect = "Dano elemental pesado com precisao reduzida."
   awakeningOnly = $false
-  reason = "Gelo so tinha tres golpes"; impact = "Amplia o repertorio de Gelo"
+  reason = "Terra so tinha tres golpes"; impact = "Amplia o repertorio de Terra"
 } | ConvertTo-Json
 Invoke-RestMethod "$api/abilities" -Method Post -Headers $h -Body $body
 
@@ -240,6 +240,66 @@ Invoke-RestMethod "$api/merchant-offers/batch" -Method Post -Headers $h -Body $b
 `role` válidos: `merchant`, `duelist`, `quest`, `flavor` — decide qual tela o jogo abre. `price` omitido cobra `item_stats.value`; preenchido, é o sobrepreço daquele comerciante.
 
 O export **aborta** se um NPC com papel `merchant` não tiver nenhuma oferta — uma loja vazia é sempre erro de cadastro.
+
+## Montar uma arena e a travessia que ela abre
+
+Três tabelas, nesta ordem — o Glifo antes de quem o concede, e quem o concede antes de quem o exige.
+
+```powershell
+# 1. O Glifo (só quando abre uma era nova; travessia interna não usa).
+$body = @{ code="GLF-003"; name="Heth"; reason="..."; impact="..." } | ConvertTo-Json
+Invoke-RestMethod "$api/glyphs" -Method Post -Headers $h -Body $body
+
+# 2. A arena: filha 1:1 do NPC com role = duelist.
+$body = @{
+  npcCode = "NPC-002"; opponentCreatureCode = "CRT-021"; opponentLevel = 18
+  grantsGlyphCode = "GLF-003"      # omita numa arena intermediária
+  reason = "..."; impact = "..."
+} | ConvertTo-Json
+Invoke-RestMethod "$api/npc-duelists" -Method Post -Headers $h -Body $body
+
+# 3. A travessia. Sem requiredGlyphCode = passagem livre, sem guardião.
+$body = @{
+  fromMapCode = "PZ-03"; toMapCode = "MZ-01"; requiredGlyphCode = "GLF-003"
+  sortOrder = 0; reason = "..."; impact = "..."
+} | ConvertTo-Json
+Invoke-RestMethod "$api/map-connections" -Method Post -Headers $h -Body $body
+```
+
+**Todo mapa tem arena; só a do último mapa da era concede Glifo** (ver `glifos-e-portais`). Por isso `grantsGlyphCode` omitido é o caso comum, não o excepcional — e `requiredGlyphCode` omitido também, já que travessia dentro de uma era é livre.
+
+O que morde:
+
+- Um Glifo é concedido por **uma** arena. Apontar o mesmo `grantsGlyphCode` de outra arena responde 409.
+- `npc-duelists` é upsert por NPC: re-POSTar o mesmo `npcCode` **substitui** a linha inteira, inclusive trocando o Glifo. Não é violação de unicidade, é a mesma linha sendo reescrita.
+- Duelo em NPC que não é `duelist` responde 422 nomeando o papel.
+- O export **aborta** em duelista sem linha de duelo, em nível acima de `combat_rules.levelMax`, e em travessia exigindo Glifo que arena nenhuma concede — este último trancaria a campanha em silêncio. **Avisa** (e escreve) quando um Glifo concedido não abre travessia nenhuma: é o estado normal enquanto a era seguinte não tem mapa.
+- Onde o guardião e a arena ficam plantados **não** é cadastro: posição é layout de cena, no repo do jogo.
+
+## Dizer onde cada bioma fica dentro do mapa
+
+```powershell
+$body = @{
+  items = @(
+    @{ code="RGN-010"; mapCode="PZ-02"; biomeCode="BIO-005"
+       shape="band";   params=@{ axis="z"; from=-1.0; to=-0.4 }; sortOrder=0 }
+    @{ code="RGN-011"; mapCode="PZ-02"; biomeCode="BIO-006"
+       shape="circle"; params=@{ cx=0.2; cz=0.1; r=0.35 };       sortOrder=1 }
+    @{ code="RGN-012"; mapCode="PZ-02"; biomeCode="BIO-007"
+       shape="rect";   params=@{ x0=-1.0; z0=-1.0; x1=1.0; z1=1.0 }; sortOrder=2 }
+  )
+  reason = "..."; impact = "..."
+} | ConvertTo-Json -Depth 5
+Invoke-RestMethod "$api/map-biome-regions/batch" -Method Post -Headers $h -Body $body
+```
+
+**Coordenadas são normalizadas a `[-1, 1]`, nunca metros.** O mapa é o quadrado unitário e o jogo multiplica pelo meio-lado dele. Em metros, redimensionar o mapa moveria toda região para o chão errado sem nenhum erro.
+
+- `params` é validado contra `shape` — mandar `{cx, cz, r}` com `shape: "band"` responde 422 listando as chaves certas. Chave a mais também reprova.
+- A avaliação segue `sortOrder` e **a primeira região que casar vence**. Feche a lista com um `rect` cobrindo o mapa inteiro: é o que garante cobertura por construção. Sem ele, um ponto fora de todas cai no fallback declarado (primeiro bioma do mapa por `map_biomes.sortOrder`), que raramente é o bioma que você queria.
+- O bioma tem de estar ligado ao mapa em `map_biomes` primeiro — senão 422.
+- `PATCH` exige `shape` e `params` **juntos**: mandar um sem o outro deixaria a linha descrevendo uma forma que os parâmetros não servem, e ela simplesmente pararia de casar.
+- Esta tabela **ainda não é exportada**. Ela existe e a API escreve, mas o jogo não tem leitor: ligar a consulta por posição antes de os biomas terem `mining_rates` tornaria a mineração pior, não melhor. Taxas primeiro, partição depois.
 
 ## Balancear a economia
 
@@ -334,7 +394,14 @@ $body = @{ role = "regular"; reason = "..."; impact = "..." } | ConvertTo-Json
 Invoke-RestMethod "$api/creatures/CRT-028" -Method Patch -Headers $h -Body $body
 ```
 
+**Documento de design** — `PATCH /documents/{slug}` com `bodyMarkdown`. Antes de escrever, leia a seção **"Onde cada informação mora"** do [CLAUDE.md](../CLAUDE.md): documento guarda regra estrutural, critério de autoria e ponteiro para as tabelas — **nunca** lista de instâncias, contagem ou constante que já mora numa tabela. Documento que transcreve catálogo envelhece calado, e foi assim que `mineracao` e `progressao` passaram a contradizer o banco.
+
+> **Acento pelo PowerShell corrompe.** As versões 0.190–0.192 são três correções seguidas de mojibake introduzido por corpo montado em linha de comando. Para texto longo com acentuação, monte o corpo num arquivo UTF-8 e envie o arquivo — `curl.exe --data-binary "@corpo.json"` ou um script Node com `fetch`, que serializa em UTF-8 sozinho.
+
 **`combat-rules`** — singleton, usa `PATCH` (ver acima).
+
+**Duas junções têm `DELETE`** — `creature-abilities` e `drops`. É a única coisa que o upsert não sabe dizer: que um vínculo deve deixar de existir. Re-POSTar só acrescenta; `chance: 0` num drop não remove nada, porque a linha continua afirmando o par e o `game:export` lê a existência dela, não a probabilidade. Foi a reclassificação do elenco que forçou o de `drops`: ao trocar de classe, a criatura ficou largando o material de outra, e nenhum POST desfaz isso. A chave natural vai no corpo — e em `drops` ela inclui a condição, então omitir `condition` endereça a linha de condição nula, nunca todas as condições do par.
+
 
 **Camada de números e junções** (`creature-stats`, `ability-stats`, `capture-rules`, `creature-abilities`, `drops`, `map-biomes`, `elemental-advantages`, `merchant-offers`, `mining-rates`) — **não têm PATCH**. Re-POST com os valores novos; o upsert sobrescreve. Vale igual para o endpoint unitário e para o `/batch` — até 2026-08 três dos lotes sobrescreviam só na aparência, inseriam o que era novo e ignoravam em silêncio o que já existia, enquanto o changelog gravava uma versão dizendo que tinham atualizado. Se você suspeitar de um lote que "não pegou", releia o recurso antes de reescrever. Você pode mandar só o campo que mudou:
 
@@ -385,7 +452,17 @@ O export **aborta sem escrever nada** e lista o que falta se alguma criatura est
 | parada de paleta que não seja `#RRGGBB` | a API valida na escrita, mas snapshot restaurado de outra máquina não passou por ela |
 | peça de `appearance` fora do manifest do kit de personagens | mesma política do `modelUrl` |
 | taxa de mineração apontando para item que **não é `mineral`** | o peso viaja em `mining.rates`, o item não entra em `mining.items`, e o número some na normalização |
+| classe sem `primary_stat`, ou com um valor fora dos cinco stats do jogo | o bônus da classe cairia sobre nada, e a criatura sairia com o número de outra |
+| classe com `primary_stat_bonus_pct` ausente, não-numérico ou negativo | o mesmo furo, pelo outro lado |
+| `code` de classe duplicado | o jogo indexa classe por código; a segunda linha sombreia a primeira |
+| criatura, item, relic ou taxa apontando para classe inexistente | a FK cobre o banco, não um snapshot restaurado de outra máquina |
+| criatura sem classe | toda criatura tem exatamente uma; o jogo precisa dela para o bônus, o perfil de mineração e o drop de material |
+| JSON inválido em `work_function` | `MiningTable` lê como dicionário |
 | classe com criatura no elenco sem `mining_rates` ou sem `workFunction` | o perfil de trabalho da classe vira decoração |
+| classe com criatura no elenco sem material de progressão | essa criatura acumula XP e nunca sobe de nível |
+| NPC `duelist` sem linha em `npc_duelists` | a arena não tem contra quem encenar a luta |
+| `opponentLevel` acima de `combat_rules.levelMax` | nível que o jogo não sabe montar; o CHECK do banco não alcança outra tabela |
+| travessia exigindo Glifo que **arena nenhuma concede** | beco sem saída: o guardião nunca deixa passar e a campanha trava sem erro em lugar nenhum |
 
 **Avisa e escreve** — meta de conteúdo, não invariante:
 
@@ -393,8 +470,27 @@ O export **aborta sem escrever nada** e lista o que falta se alguma criatura est
 |---|---|
 | criatura sem Despertar (cobertura 1:1) | ela ainda joga, só não usa o medidor de carga |
 | elemento **sem paleta nenhuma** | as criaturas dele saem no corpo neutro; o jogo roda |
+| bioma ligado a um mapa **sem `mining_rates`** | a mineração lá cai para só-classe **em silêncio** — `MiningTable` trata lado ausente como neutro, então não há sintoma. A maioria dos biomas cadastrados ainda está assim; o documento `mineracao` manda todo `BIO-*` receber o conjunto completo de taxas, uma por minério |
+| Glifo concedido por uma arena que **travessia nenhuma exige** | esperado enquanto a era seguinte não tem mapa cadastrado — é onde Daleth está hoje |
+| classe **sem elenco** e sem `mining_rates`/`workFunction`/material | é onde CLS-004 e CLS-005 estão hoje. Nada quebra enquanto nenhuma criatura estiver nelas; a primeira que entrar transforma os três em erro |
+| classe sem emblema `.webp` no frontend | o ícone se esconde sozinho (`CodeIcon`) em vez de deixar imagem quebrada. Arte é conteúdo, e placeholder que renderiza parece pronto e nunca é substituído |
+| distribuição desigual de classes entre mapas | **não é furo.** A prevalência muda ao longo do tempo geológico de propósito |
 
 A divisão é deliberada e vale nos dois lados: `scripts/dev/test_data.gd`, no repo do jogo, usa exatamente os mesmos dois critérios — reprova no golpe inalcançável, avisa na cobertura. Suíte vermelha significa "quebrado"; alvo de conteúdo sai como aviso. Os dois guardas já discordaram: o export não olhava nenhuma dessas linhas, o teste reprovava na cobertura e não checava o golpe morto, e foi por essa fresta que `CRT-013` saiu num bundle jogando com 5 golpes contra 6 do resto do elenco.
+
+## O que fica no catálogo e não vai para o jogo
+
+Nem todo campo do catálogo é contrato com o jogo. Estes são **anotação editorial**: existem nas tabelas, aparecem na API e na web, e **não** saem no bundle.
+
+| campo | por quê |
+|---|---|
+| `creatures.role` | `text` livre, sem enum e sem documento de design que diga o que `hero`/`regular` decidem em jogo. Preenchido só em parte do elenco. Saiu do bundle em 2026-08 — se um dia significar algo, volta com leitor junto |
+| `creatures.biome` | o bioma que o jogo usa vem do **mapa** (`maps[].biomes`), não da criatura. O campo por criatura nunca teve leitor e está nulo na maioria das linhas |
+| `game_maps.biomeProgressionRaw` | **descontinuado, não escrever.** A ordem de biomas de um mapa é `map_biomes`, que é o que o bundle exporta. Esvaziado em 2026-08; a remoção da coluna está pendente |
+| `creature_classes.description` | texto de jogador sobre a especialização da classe. Nenhuma tela do Godot o mostra hoje — quando existir, ele viaja junto com o leitor |
+| `workFunction.preferredOres` | as chaves são semânticas (`fossilAmber`), não códigos `ITM-*`, e traduzi-las exigiria um mapa hardcoded no Godot. `mining_rates` já diz a mesma coisa em números. Saiu do bundle em 2026-08 |
+
+A regra por trás: campo no bundle é promessa ao jogo. Promessa que ninguém cumpre é pior que campo ausente, porque quem lê o bundle assume que alguém lê. Anotação de catálogo é legítima — só não viaja.
 
 ## Erros comuns
 
@@ -413,6 +509,6 @@ Toda mensagem nomeia o campo e os valores aceitos — leia antes de tentar de no
 - **Não adicionar conteúdo em `packages/db/src/seed/`.** Está congelado. Conteúdo lá não gera changelog nem versão, e o `upsertClass` chega a sobrescrever nomes em silêncio na próxima execução.
 - **Não editar `data/bestiary.json` à mão** no repo do jogo. É gerado; a próxima exportação sobrescreve.
 - **Não escrever no banco por SQL direto.** Pula o changelog, o validador de terminologia e a atribuição de versão.
-- **Não criar criatura fora de Loricati, Theria ou Draconis.** Escopo fechado.
+- **Não escolher a classe pela taxonomia da criatura.** Classe é especialização de atributo, não linhagem: a pergunta é o que ela faz numa luta. As afinidades (artrópode tende a defesa, predador sinapsídeo tende a ataque) são tendências de design, não regras. Ver documento `classes`.
 - **Não escolher a versão.** O servidor atribui. Mandar `version` no body não faz nada.
 - **Não citar os termos descontinuados em documento**, nem para explicar que estão descontinuados — foi assim que o documento `despertar-ancestral` se corrompeu. A lista vive em `terminology.ts`.

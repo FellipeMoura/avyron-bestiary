@@ -34,9 +34,15 @@ function collectEndpoints(): Map<string, string[]> {
  * separate lists.
  */
 export async function buildContextMarkdown(): Promise<string> {
-  const [classes, elements, creaturesByEra, recentChanges, docCounts] = await Promise.all([
+  const [classes, elements, creaturesByEra, recentChanges, docCounts, classMaterials] = await Promise.all([
     db
-      .select({ code: schema.creatureClasses.code, name: schema.creatureClasses.name, status: schema.creatureClasses.status })
+      .select({
+        code: schema.creatureClasses.code,
+        name: schema.creatureClasses.name,
+        primaryStat: schema.creatureClasses.primaryStat,
+        primaryStatBonusPct: schema.creatureClasses.primaryStatBonusPct,
+        status: schema.creatureClasses.status,
+      })
       .from(schema.creatureClasses)
       .orderBy(asc(schema.creatureClasses.code)),
     db
@@ -62,6 +68,23 @@ export async function buildContextMarkdown(): Promise<string> {
       .orderBy(desc(schema.changelog.date), desc(schema.changelog.id))
       .limit(5),
     db.select({ n: sql<number>`COUNT(*)::int` }).from(schema.designDocuments),
+    /**
+     * The class → material pairing, queried instead of transcribed. This
+     * block used to name three items by hand; with the cast reopened to five
+     * classes, a hand-written list is a line that goes stale the moment
+     * someone adds the fourth material and forgets this file.
+     */
+    db
+      .select({
+        classCode: schema.creatureClasses.code,
+        className: schema.creatureClasses.name,
+        itemCode: schema.items.code,
+        itemName: schema.items.name,
+      })
+      .from(schema.items)
+      .innerJoin(schema.creatureClasses, eq(schema.items.classId, schema.creatureClasses.id))
+      .where(eq(schema.items.category, "material"))
+      .orderBy(asc(schema.creatureClasses.code)),
   ]);
 
   const lines: string[] = [];
@@ -76,7 +99,8 @@ export async function buildContextMarkdown(): Promise<string> {
   lines.push("- Version format is `0.NN`, monotonic, server-assigned.");
   lines.push("- POST responds `{\"code\",\"version\"}`. PATCH responds `{\"code\",\"version\"}`. Batch responds `{\"codes\":[...],\"version\"}`. Never the full row.");
   lines.push("- Foreign keys go by CODE (e.g. `classCode: \"CLS-001\"`), never by numeric id. Unknown code → 422 with the valid options.");
-  lines.push("- Junctions (`/drops`, `/map-biomes`, `/elemental-advantages`) POST is upsert. No PATCH/DELETE — re-POST to change values.");
+  lines.push("- Junctions (`/drops`, `/map-biomes`, `/elemental-advantages`) POST is upsert. No PATCH — re-POST to change values.");
+  lines.push("- Two junctions also take DELETE, for the one thing upsert cannot express — that a link should stop existing: `/creature-abilities` (natural key: creature + ability) and `/drops` (natural key: creature + item + condition). The key goes in the body; omitting `condition` addresses the row whose condition is null, never all conditions for the pair. `chance: 0` is not a removal — the row still asserts the pairing and the export reads its existence.");
   lines.push("- 409 on: duplicate `code`, or POST /awakenings when the creature already has one.");
   lines.push("- 422 on: schema validation, unknown `?fields`, forbidden terminology, unknown FK code. Error messages name the field and list valid values.");
   lines.push("");
@@ -104,10 +128,11 @@ export async function buildContextMarkdown(): Promise<string> {
   lines.push("## Domain invariants");
   lines.push("- **The game is 3D**, Godot, locked isometric orthographic camera at 30° pitch / 45° yaw. Exploration is real-time; **combat is turn-based**, 1v1 with free switching, fought in-world. See documents `combate` and `camera-e-perspectiva`.");
   lines.push("- **The game is called Avyron.** Eras carry in-world names: Aetheris (paleozoic), Titanor (mesozoic), Novaterra (cenozoic). The database enum stays English — only labels changed. See document `nomenclatura`.");
-  lines.push("- **Roster is closed at three lineages:** Loricati (CLS-001, arthropods), Theria (CLS-002, synapsids), Draconis (CLS-003, sauropsids). Creatures outside them are out of scope.");
+  lines.push("- **Roster is closed at five classes**, listed under \"Creature classes\" below. A class is a **gameplay specialisation, not a lineage** — it names the one stat the creature is built around, and taxonomy is independent of it since 2026-08. Any creature of any lineage may carry any class; there is no taxonomic validation. See document `classes`.");
   lines.push("- **Creature ↔ Awakening is 1:1.** `POST /awakenings` for a creature that already has one → 409.");
-  lines.push("- **Classes have no CLS×CLS advantage matrix** (Changelog 0.01) — no damage/multiplier/stat fields on `creature_classes`, and no cycle like the elemental ring exists between classes. Refined by the Relicário system: an *equipment* (relic) can grant a class-linked bonus to capture chance, but that is a property of the equipment, not a class-vs-class matchup. The Relicário no longer grants a combat status buff (removed from the system's scope — see `relicario`). See documents `classes`, `captura`, `relicario`.");
-  lines.push("- **Elements DO influence combat**, as a closed ring: Agua → Fogo → Natureza → Terra → Gelo → Eletricidade → Agua (arrow means \"beats\"). Advantage 2.0, disadvantage 0.5, everything else 1.0 by omission.");
+  lines.push("- **A class boosts its own `primaryStat` and nothing else.** `primaryStatBonusPct` is percentage points (`20` = +20%), applied by the game on top of the level curve — `floor(base * (1 + growthRate * (level - 1)) * (1 + pct/100))`, on that one stat only. The number lives in the catalog because it is tuning; nothing equivalent exists in the Godot code.");
+  lines.push("- **Classes still have no CLS×CLS advantage matrix** (Changelog 0.01) — no value on `creature_classes` ever depends on the OPPOSING class, and no cycle like the elemental ring exists between classes. Same refinement for the Relicário system: an *equipment* (relic) can grant a class-linked bonus to capture chance, but that is a property of the equipment, not a class-vs-class matchup. The Relicário no longer grants a combat status buff (removed from the system's scope — see `relicario`). See documents `classes`, `captura`, `relicario`.");
+  lines.push("- **Elements DO influence combat**, as a closed ring: Agua → Fogo → Natureza → Terra → Eletricidade → Agua (arrow means \"beats\"). Advantage 2.0, disadvantage 0.5, everything else 1.0 by omission. Each element beats exactly one and loses to exactly one — the symmetry is the point. **Gelo (ELE-006) was removed in 2026-08**, along with its four abilities and its elemental crystal; the ring closed with Terra → Eletricidade.");
   lines.push("- **Elements carry a visual palette the game consumes.** `paletteShadow`/`paletteMid`/`paletteHighlight` are one RAMP read by luminance (darkest texel of the creature body lands on shadow, brightest on highlight) — not three independent colours. `paletteAura` is the Despertar Ancestral glow and is a separate column on purpose: an aura in the body's own colour is invisible. `paletteSpread` (0–0.5) is how far one creature may drift inside the family. All colours are `#RRGGBB`, six digits. Prefer the `/elements` screen in the web UI — it previews the ramp against the real map backdrops, which a PATCH cannot.");
   lines.push("- **3 eras × 3 maps × ~20 unique creatures.** Reappearances on later maps do not count toward the cap.");
   lines.push("");
@@ -131,7 +156,15 @@ export async function buildContextMarkdown(): Promise<string> {
   lines.push("- `xpToNext(level) = floor(xpCurveBase * level ^ xpCurveExponent)`.");
   lines.push("- XP gained on a win: `floor(target.xpYield * targetLevel / xpYieldDivisor)`. `xpYield` is per species, on `creature-stats`.");
   lines.push("- Material cost: `itemCostBase + floor(level / itemCostLevelStep)` units of the **levelling creature's own class** item.");
-  lines.push("- One material per class, `category: \"material\"`: ITM-019 Quitina Fossilizada (Loricati), ITM-020 Presa Fóssil (Theria), ITM-021 Escama Fóssil (Draconis).");
+  if (classMaterials.length > 0) {
+    const list = classMaterials.map((m) => `${m.itemCode} ${m.itemName} (${m.className})`).join(", ");
+    lines.push(`- One material per class, \`category: "material"\`: ${list}.`);
+  }
+  const withoutMaterial = classes.filter((c) => !classMaterials.some((m) => m.classCode === c.code));
+  if (withoutMaterial.length > 0) {
+    const list = withoutMaterial.map((c) => `${c.code} ${c.name}`).join(", ");
+    lines.push(`- **Pending content:** ${list} ${withoutMaterial.length === 1 ? "has" : "have"} no material item yet. Nothing breaks while the class has no cast, but a creature of it could not level up — author the material before giving the class creatures.`);
+  }
   lines.push("- They come from `drops` (creature × item, `condition: \"Derrota em combate\"`) — the class of the **defeated** creature decides which material falls, never the winner's. This is loot categorisation only; classes still do not influence combat.");
   lines.push("");
 
@@ -157,10 +190,10 @@ export async function buildContextMarkdown(): Promise<string> {
 
   lines.push("## Mining system");
   lines.push("_Tamed creatures mine automatically. Ore type is determined by class × biome affinity._");
-  lines.push("- `items` — mineral SKUs (ITM-001 Pedra … ITM-012 Cristal Elemental Gelo). `category: \"mineral\"`.");
+  lines.push("- `items` — mineral SKUs, `category: \"mineral\"`. There is one Cristal Elemental per element; which minerals exist is a query, not a range written here.");
   lines.push("- `mining-rates` — junction: (classCode|biomeCode) + itemCode → weight [0,1]. Upsert, no PATCH/DELETE.");
   lines.push("- Final ore chance: `normalize(class_weight[ore] × biome_weight[ore])`. See document `mineracao`.");
-  lines.push("- `creature_classes.workFunction` — JSON `{speedModifier, preferredOres, role}` per class.");
+  lines.push("- `creature_classes.workFunction` — JSON `{speedModifier, role}` per class. Older rows may still carry a `preferredOres` key in the stored JSON: it is catalog-only annotation and no longer travels in the bundle, because the weights already say the same thing in numbers.");
   lines.push("");
 
   lines.push("## Elements");
@@ -168,10 +201,13 @@ export async function buildContextMarkdown(): Promise<string> {
   lines.push("");
 
   lines.push("## Creature classes");
-  lines.push("_(Classes do NOT influence combat — Changelog 0.01)_");
+  lines.push("_Gameplay specialisation, not lineage. Each boosts exactly one stat; no class beats another._");
   for (const c of classes) {
     const status = c.status ? ` [${c.status}]` : "";
-    lines.push(`- ${c.code} — ${c.name}${status}`);
+    const spec = c.primaryStat
+      ? ` — +${c.primaryStatBonusPct}% ${c.primaryStat}`
+      : " — **no primaryStat set**, which the export refuses to ship";
+    lines.push(`- ${c.code} — ${c.name}${spec}${status}`);
   }
   lines.push("");
 

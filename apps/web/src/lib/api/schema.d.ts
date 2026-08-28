@@ -164,7 +164,54 @@ export interface paths {
         };
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete ability */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    code: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DeleteAbilityBody"];
+                };
+            };
+            responses: {
+                /** @description Deleted */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UpdatedResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Still referenced by other records */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         options?: never;
         head?: never;
         /** Update ability */
@@ -2252,7 +2299,41 @@ export interface paths {
                 };
             };
         };
-        delete?: never;
+        /**
+         * Remove one drop (natural key: creature + item + condition)
+         * @description Omitting `condition` addresses the row whose condition is null, matching the upsert's conflict target — it never removes every condition for the pair. Use this instead of re-POSTing with `chance: 0`: a row with chance 0 still asserts the pairing, and the export reads the row's existence.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DeleteDropBody"];
+                };
+            };
+            responses: {
+                /** @description Deleted */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DeletedDropResponse"];
+                    };
+                };
+                /** @description Creature does not drop this item under this condition */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -2725,6 +2806,514 @@ export interface paths {
         };
         trace?: never;
     };
+    "/equipment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List equipment */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    offset?: number | null;
+                    fields?: string;
+                    slot?: "amplifier" | "enchanter";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Equipment"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create equipment */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateEquipmentBody"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CreatedEquipmentResponse"];
+                    };
+                };
+                /** @description Code already exists */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed or deprecated term */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/equipment/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Batch create equipment */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BatchCreateEquipmentBody"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BatchCreatedEquipmentResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/equipment/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one by code */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    code: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The row */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Equipment"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update equipment */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    code: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateEquipmentBody"];
+                };
+            };
+            responses: {
+                /** @description Updated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UpdatedEquipmentResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed or deprecated term */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/equipment-recipes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List equipment recipe lines (filter by equipment and/or item) */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    offset?: number | null;
+                    fields?: string;
+                    equipmentCode?: string;
+                    itemCode?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EquipmentRecipe"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Upsert one recipe line (natural key: equipment + item) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpsertEquipmentRecipeBody"];
+                };
+            };
+            responses: {
+                /** @description Upserted */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UpsertEquipmentRecipeResponse"];
+                    };
+                };
+            };
+        };
+        /**
+         * Remove one ingredient from a recipe (natural key: equipment + item)
+         * @description The only thing upsert cannot express. `quantity: 0` is not an alternative — the check constraint rejects it, so no row can claim to be an ingredient of zero units.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DeleteEquipmentRecipeBody"];
+                };
+            };
+            responses: {
+                /** @description Deleted */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DeletedEquipmentRecipeResponse"];
+                    };
+                };
+                /** @description This recipe does not use this item */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/equipment-recipes/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Batch upsert recipe lines */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BatchUpsertEquipmentRecipesBody"];
+                };
+            };
+            responses: {
+                /** @description Upserted */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BatchUpsertEquipmentRecipesResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/equipment-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List equipment-stats */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    offset?: number | null;
+                    fields?: string;
+                    equipmentCode?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EquipmentStat"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Upsert equipment-stats for one equipment */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpsertEquipmentStatBody"];
+                };
+            };
+            responses: {
+                /** @description Upserted */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UpsertEquipmentStatResponse"];
+                    };
+                };
+                /** @description Validation failed or unknown code */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/equipment-stats/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Batch upsert equipment-stats */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BatchUpsertEquipmentStatsBody"];
+                };
+            };
+            responses: {
+                /** @description Upserted */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BatchUpsertEquipmentStatsResponse"];
+                    };
+                };
+                /** @description Validation failed or unknown code */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/equipment-stats/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get by equipment code */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    code: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The row */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EquipmentStat"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/maps": {
         parameters: {
             query?: never;
@@ -2956,6 +3545,256 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["UpdatedResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed or deprecated term */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/glyphs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List glyphs */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    offset?: number | null;
+                    fields?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Glyph"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create glyph */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateGlyphBody"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CreatedGlyphResponse"];
+                    };
+                };
+                /** @description Code already exists */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed or deprecated term */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/glyphs/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Batch create glyphs */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BatchCreateGlyphsBody"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BatchCreatedGlyphsResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/glyphs/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one by code */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    code: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The row */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Glyph"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Delete glyph */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    code: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DeleteGlyphBody"];
+                };
+            };
+            responses: {
+                /** @description Deleted */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UpdatedGlyphResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Still referenced by other records */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Update glyph */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    code: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateGlyphBody"];
+                };
+            };
+            responses: {
+                /** @description Updated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UpdatedGlyphResponse"];
                     };
                 };
                 /** @description Not found */
@@ -3392,6 +4231,258 @@ export interface paths {
         };
         trace?: never;
     };
+    "/map-biome-regions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List map-biome-regions */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    offset?: number | null;
+                    fields?: string;
+                    mapCode?: string;
+                    biomeCode?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MapBiomeRegion"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create map-biome-region */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateMapBiomeRegionBody"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CreatedMapBiomeRegionResponse"];
+                    };
+                };
+                /** @description Code already exists */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed or deprecated term */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/map-biome-regions/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Batch create map-biome-regions */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BatchCreateMapBiomeRegionsBody"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BatchCreatedMapBiomeRegionsResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/map-biome-regions/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one by code */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    code: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The row */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MapBiomeRegion"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Delete map-biome-region */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    code: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DeleteMapBiomeRegionBody"];
+                };
+            };
+            responses: {
+                /** @description Deleted */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UpdatedMapBiomeRegionResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Still referenced by other records */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Update map-biome-region */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    code: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateMapBiomeRegionBody"];
+                };
+            };
+            responses: {
+                /** @description Updated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UpdatedMapBiomeRegionResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed or deprecated term */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
     "/map-biomes": {
         parameters: {
             query?: never;
@@ -3488,6 +4579,120 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["BatchUpsertMapBiomesResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/map-connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List map→map crossings (filter by origin, destination or glyph) */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    offset?: number | null;
+                    fields?: string;
+                    fromMapCode?: string;
+                    toMapCode?: string;
+                    glyphCode?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MapConnection"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Upsert one map crossing */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpsertMapConnectionBody"];
+                };
+            };
+            responses: {
+                /** @description Upserted */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UpsertMapConnectionResponse"];
+                    };
+                };
+                /** @description Unknown code, or a map connected to itself */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/map-connections/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Batch upsert map crossings */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BatchUpsertMapConnectionsBody"];
+                };
+            };
+            responses: {
+                /** @description Upserted */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BatchUpsertMapConnectionsResponse"];
                     };
                 };
             };
@@ -4077,6 +5282,171 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["NpcAppearance"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/npc-duelists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List npc-duelists */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    offset?: number | null;
+                    fields?: string;
+                    npcCode?: string;
+                    glyphCode?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NpcDuelist"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Upsert npc-duelists for one npc */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpsertNpcDuelistBody"];
+                };
+            };
+            responses: {
+                /** @description Upserted */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UpsertNpcDuelistResponse"];
+                    };
+                };
+                /** @description Validation failed or unknown code */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/npc-duelists/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Batch upsert npc-duelists */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BatchUpsertNpcDuelistsBody"];
+                };
+            };
+            responses: {
+                /** @description Upserted */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BatchUpsertNpcDuelistsResponse"];
+                    };
+                };
+                /** @description Validation failed or unknown code */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/npc-duelists/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get by npc code */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    code: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The row */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NpcDuelist"];
                     };
                 };
                 /** @description Not found */
@@ -4913,6 +6283,18 @@ export interface components {
              */
             impact: string;
         };
+        DeleteAbilityBody: {
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
         AbilityStat: {
             id: number;
             abilityId: number;
@@ -5427,13 +6809,16 @@ export interface components {
              */
             impact: string;
         };
-        /** @description Biological lineage. Classes do NOT influence combat — hard rule from Changelog 0.01. */
+        /** @description Gameplay specialisation, NOT a biological lineage — taxonomy is independent of class since 2026-08. Each class boosts exactly one stat (`primaryStat`) by `primaryStatBonusPct`. There is still no CLS×CLS advantage matrix: no value here ever depends on the opposing class. */
         CreatureClass: {
             id: number;
             /** @example CLS-001 */
             code: string;
             name: string;
-            biologicalScope: string | null;
+            /** @enum {string|null} */
+            primaryStat: "hp" | "attack" | "defense" | "speed" | "charge" | null;
+            primaryStatBonusPct: number;
+            description: string | null;
             passive: string | null;
             workFunction: string | null;
             fusionRule: string | null;
@@ -5447,7 +6832,15 @@ export interface components {
             items: {
                 code: string;
                 name: string;
-                biologicalScope?: string | null;
+                /**
+                 * @example defense
+                 * @enum {string}
+                 */
+                primaryStat: "hp" | "attack" | "defense" | "speed" | "charge";
+                /** @example 20 */
+                primaryStatBonusPct: number;
+                /** @example Especialistas em Defesa. Criaturas resistentes… */
+                description: string;
                 passive?: string | null;
                 workFunction?: string | null;
                 fusionRule?: string | null;
@@ -5467,7 +6860,15 @@ export interface components {
         CreateCreatureClassBody: {
             code?: string;
             name: string;
-            biologicalScope?: string | null;
+            /**
+             * @example defense
+             * @enum {string}
+             */
+            primaryStat: "hp" | "attack" | "defense" | "speed" | "charge";
+            /** @example 20 */
+            primaryStatBonusPct: number;
+            /** @example Especialistas em Defesa. Criaturas resistentes… */
+            description: string;
             passive?: string | null;
             workFunction?: string | null;
             fusionRule?: string | null;
@@ -5486,7 +6887,15 @@ export interface components {
         UpdateCreatureClassBody: {
             code?: string;
             name?: string;
-            biologicalScope?: string | null;
+            /**
+             * @example defense
+             * @enum {string}
+             */
+            primaryStat?: "hp" | "attack" | "defense" | "speed" | "charge";
+            /** @example 20 */
+            primaryStatBonusPct?: number;
+            /** @example Especialistas em Defesa. Criaturas resistentes… */
+            description?: string;
             passive?: string | null;
             workFunction?: string | null;
             fusionRule?: string | null;
@@ -5925,6 +7334,31 @@ export interface components {
              */
             impact: string;
         };
+        DeletedDropResponse: {
+            id: number;
+            version: string;
+        };
+        DeleteDropBody: {
+            /** @example CRT-001 */
+            creatureCode: string;
+            /** @example ITM-019 */
+            itemCode: string;
+            /**
+             * @description Parte da chave natural. Omitido remove a linha cuja condição é nula, não todas as condições do par.
+             * @example Derrota em combate
+             */
+            condition?: string | null;
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
         ElementalAdvantage: {
             id: number;
             attackerElementId: number;
@@ -6141,6 +7575,279 @@ export interface components {
              */
             impact: string;
         };
+        Equipment: {
+            id: number;
+            /** @example EQP-001 */
+            code: string;
+            name: string;
+            /** @enum {string} */
+            slot: "amplifier" | "enchanter";
+            effect: string | null;
+            notes: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        BatchCreatedEquipmentResponse: {
+            codes: string[];
+            version: string;
+        };
+        BatchCreateEquipmentBody: {
+            items: {
+                /** @example EQP-001 */
+                code: string;
+                /** @example Amplificador de Cobre */
+                name: string;
+                /**
+                 * @description amplifier applies its modifier to the player's own creature; enchanter to the opponent's. The slot decides the target — `effectCode` in equipment-stats decides only which stat.
+                 * @example amplifier
+                 * @enum {string}
+                 */
+                slot: "amplifier" | "enchanter";
+                /** @description Prose for the web catalog. The executable pair lives in equipment-stats. */
+                effect?: string | null;
+                notes?: string | null;
+            }[];
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        CreatedEquipmentResponse: {
+            code: string;
+            version: string;
+        };
+        CreateEquipmentBody: {
+            /** @example EQP-001 */
+            code: string;
+            /** @example Amplificador de Cobre */
+            name: string;
+            /**
+             * @description amplifier applies its modifier to the player's own creature; enchanter to the opponent's. The slot decides the target — `effectCode` in equipment-stats decides only which stat.
+             * @example amplifier
+             * @enum {string}
+             */
+            slot: "amplifier" | "enchanter";
+            /** @description Prose for the web catalog. The executable pair lives in equipment-stats. */
+            effect?: string | null;
+            notes?: string | null;
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        UpdatedEquipmentResponse: {
+            code: string;
+            version: string;
+        };
+        UpdateEquipmentBody: {
+            /** @example EQP-001 */
+            code?: string;
+            /** @example Amplificador de Cobre */
+            name?: string;
+            /**
+             * @description amplifier applies its modifier to the player's own creature; enchanter to the opponent's. The slot decides the target — `effectCode` in equipment-stats decides only which stat.
+             * @example amplifier
+             * @enum {string}
+             */
+            slot?: "amplifier" | "enchanter";
+            /** @description Prose for the web catalog. The executable pair lives in equipment-stats. */
+            effect?: string | null;
+            notes?: string | null;
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        EquipmentRecipe: {
+            id: number;
+            equipmentId: number;
+            itemId: number;
+            quantity: number;
+            notes: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        BatchUpsertEquipmentRecipesResponse: {
+            ids: number[];
+            version: string;
+        };
+        BatchUpsertEquipmentRecipesBody: {
+            items: {
+                /** @example EQP-001 */
+                equipmentCode: string;
+                /** @example ITM-004 */
+                itemCode: string;
+                /**
+                 * @description Units of this item consumed by one craft.
+                 * @example 6
+                 */
+                quantity: number;
+                notes?: string | null;
+            }[];
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        UpsertEquipmentRecipeResponse: {
+            id: number;
+            version: string;
+        };
+        UpsertEquipmentRecipeBody: {
+            /** @example EQP-001 */
+            equipmentCode: string;
+            /** @example ITM-004 */
+            itemCode: string;
+            /**
+             * @description Units of this item consumed by one craft.
+             * @example 6
+             */
+            quantity: number;
+            notes?: string | null;
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        DeletedEquipmentRecipeResponse: {
+            id: number;
+            version: string;
+        };
+        DeleteEquipmentRecipeBody: {
+            /** @example EQP-001 */
+            equipmentCode: string;
+            /** @example ITM-004 */
+            itemCode: string;
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        EquipmentStat: {
+            id: number;
+            equipmentId: number;
+            tier: number;
+            /** @enum {string} */
+            effectCode: "buff_attack" | "buff_defense" | "debuff_attack" | "debuff_defense";
+            effectValue: number;
+            notes: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        BatchUpsertEquipmentStatsResponse: {
+            codes: string[];
+            version: string;
+        };
+        BatchUpsertEquipmentStatsBody: {
+            items: {
+                /** @example EQP-001 */
+                equipmentCode: string;
+                /**
+                 * @description Rank inside the slot. Ordering and naming only — no formula reads it. Strength is effectValue.
+                 * @example 1
+                 */
+                tier: number;
+                /**
+                 * @description Which stat the modifier moves. WHO it lands on comes from equipment.slot, not from here.
+                 * @example buff_attack
+                 * @enum {string}
+                 */
+                effectCode: "buff_attack" | "buff_defense" | "debuff_attack" | "debuff_defense";
+                /**
+                 * @description Percentage points, never a fraction — 10 means +10%. Same unit ability_stats uses for these same four codes. The game applies it as modifier *= 1 ± value/100.
+                 * @example 5
+                 */
+                effectValue: number;
+                notes?: string | null;
+            }[];
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        UpsertEquipmentStatResponse: {
+            code: string;
+            version: string;
+        };
+        UpsertEquipmentStatBody: {
+            /** @example EQP-001 */
+            equipmentCode: string;
+            /**
+             * @description Rank inside the slot. Ordering and naming only — no formula reads it. Strength is effectValue.
+             * @example 1
+             */
+            tier: number;
+            /**
+             * @description Which stat the modifier moves. WHO it lands on comes from equipment.slot, not from here.
+             * @example buff_attack
+             * @enum {string}
+             */
+            effectCode: "buff_attack" | "buff_defense" | "debuff_attack" | "debuff_defense";
+            /**
+             * @description Percentage points, never a fraction — 10 means +10%. Same unit ability_stats uses for these same four codes. The game applies it as modifier *= 1 ± value/100.
+             * @example 5
+             */
+            effectValue: number;
+            notes?: string | null;
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
         GameMap: {
             id: number;
             /** @example PZ-01 */
@@ -6223,6 +7930,89 @@ export interface components {
             impact: string;
         };
         DeleteGameMapBody: {
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        Glyph: {
+            id: number;
+            /** @example GLF-001 */
+            code: string;
+            /** @example Daleth */
+            name: string;
+            notes: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        BatchCreatedGlyphsResponse: {
+            codes: string[];
+            version: string;
+        };
+        BatchCreateGlyphsBody: {
+            items: {
+                code: string;
+                name: string;
+                notes?: string | null;
+            }[];
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        CreatedGlyphResponse: {
+            code: string;
+            version: string;
+        };
+        CreateGlyphBody: {
+            code?: string;
+            name: string;
+            notes?: string | null;
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        UpdatedGlyphResponse: {
+            code: string;
+            version: string;
+        };
+        UpdateGlyphBody: {
+            code?: string;
+            name?: string;
+            notes?: string | null;
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        DeleteGlyphBody: {
             /**
              * @description Por que a mudança está sendo feita. Vai para o changelog.
              * @example 6º elemento definido para expansão do Cenozoico
@@ -6421,6 +8211,173 @@ export interface components {
              */
             impact: string;
         };
+        MapBiomeRegion: {
+            id: number;
+            /** @example RGN-001 */
+            code: string;
+            mapId: number;
+            biomeId: number;
+            /** @enum {string} */
+            shape: "band" | "circle" | "rect";
+            params: {
+                /** @enum {string} */
+                axis: "x" | "z";
+                from: number;
+                to: number;
+            } | {
+                cx: number;
+                cz: number;
+                r: number;
+            } | {
+                x0: number;
+                z0: number;
+                x1: number;
+                z1: number;
+            };
+            sortOrder: number;
+            notes: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        BatchCreatedMapBiomeRegionsResponse: {
+            codes: string[];
+            version: string;
+        };
+        BatchCreateMapBiomeRegionsBody: {
+            items: {
+                code: string;
+                /** @example PZ-01 */
+                mapCode: string;
+                /** @example BIO-002 */
+                biomeCode: string;
+                /** @enum {string} */
+                shape: "band" | "circle" | "rect";
+                params: {
+                    /** @enum {string} */
+                    axis: "x" | "z";
+                    from: number;
+                    to: number;
+                } | {
+                    cx: number;
+                    cz: number;
+                    r: number;
+                } | {
+                    x0: number;
+                    z0: number;
+                    x1: number;
+                    z1: number;
+                };
+                /** @default 0 */
+                sortOrder: number;
+                notes?: string | null;
+            }[];
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        CreatedMapBiomeRegionResponse: {
+            code: string;
+            version: string;
+        };
+        CreateMapBiomeRegionBody: {
+            code: string;
+            /** @example PZ-01 */
+            mapCode: string;
+            /** @example BIO-002 */
+            biomeCode: string;
+            /** @enum {string} */
+            shape: "band" | "circle" | "rect";
+            params: {
+                /** @enum {string} */
+                axis: "x" | "z";
+                from: number;
+                to: number;
+            } | {
+                cx: number;
+                cz: number;
+                r: number;
+            } | {
+                x0: number;
+                z0: number;
+                x1: number;
+                z1: number;
+            };
+            /** @default 0 */
+            sortOrder: number;
+            notes?: string | null;
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        UpdatedMapBiomeRegionResponse: {
+            code: string;
+            version: string;
+        };
+        UpdateMapBiomeRegionBody: {
+            code?: string;
+            /** @example PZ-01 */
+            mapCode?: string;
+            /** @example BIO-002 */
+            biomeCode?: string;
+            /** @enum {string} */
+            shape?: "band" | "circle" | "rect";
+            params?: {
+                /** @enum {string} */
+                axis: "x" | "z";
+                from: number;
+                to: number;
+            } | {
+                cx: number;
+                cz: number;
+                r: number;
+            } | {
+                x0: number;
+                z0: number;
+                x1: number;
+                z1: number;
+            };
+            /** @default 0 */
+            sortOrder: number;
+            notes?: string | null;
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        DeleteMapBiomeRegionBody: {
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
         MapBiome: {
             id: number;
             mapId: number;
@@ -6464,6 +8421,67 @@ export interface components {
             mapCode: string;
             /** @example BIO-001 */
             biomeCode: string;
+            /** @default 0 */
+            sortOrder: number;
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        MapConnection: {
+            id: number;
+            fromMapId: number;
+            toMapId: number;
+            requiredGlyphId: number | null;
+            sortOrder: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        BatchUpsertMapConnectionsResponse: {
+            ids: number[];
+            version: string;
+        };
+        BatchUpsertMapConnectionsBody: {
+            items: {
+                /** @example PZ-01 */
+                fromMapCode: string;
+                /** @example PZ-02 */
+                toMapCode: string;
+                /** @example GLF-001 */
+                requiredGlyphCode?: string | null;
+                /** @default 0 */
+                sortOrder: number;
+            }[];
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        UpsertMapConnectionResponse: {
+            id: number;
+            version: string;
+        };
+        UpsertMapConnectionBody: {
+            /** @example PZ-01 */
+            fromMapCode: string;
+            /** @example PZ-02 */
+            toMapCode: string;
+            /** @example GLF-001 */
+            requiredGlyphCode?: string | null;
             /** @default 0 */
             sortOrder: number;
             /**
@@ -6797,6 +8815,68 @@ export interface components {
             outfitHead?: string | null;
             /** @example Male_Ranger_Acc_Pauldron */
             outfitAccessory?: string | null;
+            notes?: string | null;
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        NpcDuelist: {
+            id: number;
+            npcId: number;
+            opponentCreatureId: number;
+            opponentLevel: number;
+            grantsGlyphId: number | null;
+            notes: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        BatchUpsertNpcDuelistsResponse: {
+            codes: string[];
+            version: string;
+        };
+        BatchUpsertNpcDuelistsBody: {
+            items: {
+                /** @example NPC-002 */
+                npcCode: string;
+                /** @example CRT-021 */
+                opponentCreatureCode: string;
+                opponentLevel: number;
+                /** @example GLF-001 */
+                grantsGlyphCode?: string | null;
+                notes?: string | null;
+            }[];
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        UpsertNpcDuelistResponse: {
+            code: string;
+            version: string;
+        };
+        UpsertNpcDuelistBody: {
+            /** @example NPC-002 */
+            npcCode: string;
+            /** @example CRT-021 */
+            opponentCreatureCode: string;
+            opponentLevel: number;
+            /** @example GLF-001 */
+            grantsGlyphCode?: string | null;
             notes?: string | null;
             /**
              * @description Por que a mudança está sendo feita. Vai para o changelog.

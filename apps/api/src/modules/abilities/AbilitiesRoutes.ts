@@ -7,6 +7,7 @@ import {
   CodeParamsSchema,
   CreateAbilityBodySchema,
   CreatedResponseSchema,
+  DeleteAbilityBodySchema,
   ListAbilitiesQuerySchema,
   UpdateAbilityBodySchema,
   UpdatedResponseSchema,
@@ -26,5 +27,6 @@ export const abilitiesRouter = registerCrudRoutes({
     createdResponse: CreatedResponseSchema,
     updatedResponse: UpdatedResponseSchema,
     batchCreatedResponse: BatchCreatedResponseSchema,
+    deleteBody: DeleteAbilityBodySchema,
   },
 });

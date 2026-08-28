@@ -1,0 +1,6 @@
+{"id":1,"equipment_id":1,"tier":1,"effect_code":"buff_attack","effect_value":5,"notes":null,"created_at":"2026-08-28T20:59:40.582Z","updated_at":"2026-08-28T20:59:40.582Z"}
+{"id":2,"equipment_id":2,"tier":2,"effect_code":"buff_attack","effect_value":10,"notes":null,"created_at":"2026-08-28T20:59:40.582Z","updated_at":"2026-08-28T20:59:40.582Z"}
+{"id":3,"equipment_id":3,"tier":3,"effect_code":"buff_attack","effect_value":15,"notes":null,"created_at":"2026-08-28T20:59:40.582Z","updated_at":"2026-08-28T20:59:40.582Z"}
+{"id":4,"equipment_id":4,"tier":1,"effect_code":"debuff_attack","effect_value":5,"notes":null,"created_at":"2026-08-28T20:59:40.582Z","updated_at":"2026-08-28T20:59:40.582Z"}
+{"id":5,"equipment_id":5,"tier":2,"effect_code":"debuff_attack","effect_value":10,"notes":null,"created_at":"2026-08-28T20:59:40.582Z","updated_at":"2026-08-28T20:59:40.582Z"}
+{"id":6,"equipment_id":6,"tier":3,"effect_code":"debuff_attack","effect_value":15,"notes":null,"created_at":"2026-08-28T20:59:40.582Z","updated_at":"2026-08-28T20:59:40.582Z"}

@@ -120,6 +120,41 @@
       "when": 1787781854997,
       "tag": "0016_eminent_starfox",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1787853340973,
+      "tag": "0017_curved_mandroid",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1787856248778,
+      "tag": "0018_tearful_shadow_king",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1787856259141,
+      "tag": "0019_first_runaways",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1787856493568,
+      "tag": "0020_parallel_sabretooth",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1787944334237,
+      "tag": "0021_bitter_giant_girl",
+      "breakpoints": true
     }
   ]
 }

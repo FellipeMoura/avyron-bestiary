@@ -127,7 +127,6 @@ async function seedClasses(db: Database, ws: XLSX.WorkSheet): Promise<void> {
     if (skipRow(code) || !code) continue;
     await upsertByCode(db, schema.creatureClasses, "code", code, {
       name: clean(row.Nome) ?? code,
-      biologicalScope: orNullIfPlaceholder(row.Escopo_Biologico),
       passive: orNullIfPlaceholder(row.Passiva),
       workFunction: orNullIfPlaceholder(row.Funcao_Trabalho),
       fusionRule: orNullIfPlaceholder(row.Regra_Fusao),

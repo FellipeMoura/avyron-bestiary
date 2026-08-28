@@ -126,6 +126,44 @@ export const abilitiesService = {
     });
   },
 
+  /**
+   * Remove uma habilidade. Existe porque o catálogo às vezes perde um sistema
+   * inteiro, e a linha órfã que sobra é pior que a ausência dela — foi assim
+   * com os itens de captura consumíveis (ITM-013..015), removidos quando o
+   * Relicário os substituiu em vez de virarem linhas "depreciadas" que nada
+   * consome e ninguém sabe se ainda valem.
+   *
+   * As duas tabelas dependentes caem em cascata pelo schema (`ability_stats`
+   * 1:1 e `creature_abilities`), então isto não precisa apagá-las à mão. O
+   * changelog é gravado ANTES do delete, dentro da mesma transação: depois a
+   * linha não existe mais para ler o nome dela, e `changelog.entityId` não é
+   * FK justamente para a entrada sobreviver à remoção.
+   */
+  async remove(
+    code: string,
+    body: { reason: string; impact: string },
+  ): Promise<{ code: string; version: string }> {
+    return db.transaction(async (tx) => {
+      const existing = await tx
+        .select({ id: schema.abilities.id, name: schema.abilities.name })
+        .from(schema.abilities)
+        .where(eq(schema.abilities.code, code))
+        .limit(1);
+      const row = existing[0];
+      if (!row) throw new AppError(`Ability '${code}' not found`, 404);
+
+      const version = await recordChange(tx, {
+        change: `Ability ${code} deleted (${row.name})`,
+        reason: body.reason,
+        impact: body.impact,
+        entity: "abilities",
+        entityId: row.id,
+      });
+      await tx.delete(schema.abilities).where(eq(schema.abilities.code, code));
+      return { code, version };
+    });
+  },
+
   async batchCreate(body: BatchCreateAbilitiesBody) {
     const { reason, impact, items } = body;
     return db.transaction(async (tx) => {

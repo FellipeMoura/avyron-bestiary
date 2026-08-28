@@ -138,6 +138,10 @@ const [
   maps,
   biomes,
   mapBiomes,
+  mapBiomeRegions,
+  mapConnections,
+  glyphs,
+  npcDuelists,
   changelog,
   combatRules,
   allItems,
@@ -152,6 +156,9 @@ const [
   relics,
   relicStats,
   relicRules,
+  equipment,
+  equipmentStats,
+  equipmentRecipes,
 ] = await Promise.all([
   get(`/elements?${LIMIT}`),
   get(`/elemental-advantages?${LIMIT}`),
@@ -166,6 +173,10 @@ const [
   get(`/maps?${LIMIT}`),
   get(`/biomes?${LIMIT}`),
   get(`/map-biomes?${LIMIT}`),
+  get(`/map-biome-regions?${LIMIT}`),
+  get(`/map-connections?${LIMIT}`),
+  get(`/glyphs?${LIMIT}`),
+  get(`/npc-duelists?${LIMIT}`),
   get(`/changelog?limit=1`),
   get(`/combat-rules`),
   get(`/items?${LIMIT}`),
@@ -180,6 +191,9 @@ const [
   get(`/relics?${LIMIT}`),
   get(`/relic-stats?${LIMIT}`),
   get(`/relic-rules`),
+  get(`/equipment?${LIMIT}`),
+  get(`/equipment-stats?${LIMIT}`),
+  get(`/equipment-recipes?${LIMIT}`),
 ]);
 
 // ---------------------------------------------------------------------------
@@ -195,6 +209,7 @@ const mapById = byId(maps);
 const biomeById = byId(biomes);
 const itemById = byId(allItems);
 const npcById = byId(npcs);
+const glyphById = byId(glyphs);
 
 const code = (map, id) => (id == null ? null : (map.get(id)?.code ?? null));
 
@@ -227,6 +242,7 @@ for (const offer of merchantOffers) {
  */
 const CHARACTERS_MANIFEST = resolve(REPO_ROOT, "apps/web/public/models/characters/manifest.json");
 const appearanceByNpc = new Map(npcAppearances.map((a) => [a.npcId, a]));
+const duelByNpc = new Map(npcDuelists.map((d) => [d.npcId, d]));
 
 function buildAppearance(npc) {
   const a = appearanceByNpc.get(npc.id);
@@ -305,6 +321,13 @@ for (const drop of drops) {
 }
 
 const relicStatByRelic = new Map(relicStats.map((s) => [s.relicId, s]));
+const equipmentStatByEquipment = new Map(equipmentStats.map((s) => [s.equipmentId, s]));
+const recipesByEquipment = new Map();
+for (const line of equipmentRecipes) {
+  const list = recipesByEquipment.get(line.equipmentId) ?? [];
+  list.push(line);
+  recipesByEquipment.set(line.equipmentId, list);
+}
 
 // ---------------------------------------------------------------------------
 // shaping + validation
@@ -323,6 +346,128 @@ const problems = [];
  * Despertar amanhã.
  */
 const warnings = [];
+
+// ---------------------------------------------------------------------------
+// classes — o contrato da especialização de atributo
+//
+// A classe deixou de ser linhagem e virou "qual atributo esta criatura
+// especializa". Isso move a classe de descritiva para executável: o jogo lê
+// `primaryStat` e `primaryStatBonusPct` e multiplica um dos cinco stats. Um
+// furo aqui não é anotação incompleta, é conta errada — a criatura sai do
+// bundle com o número de outra, e nada reporta.
+//
+// Os cinco tokens são os mesmos cinco que `stats_at_level` devolve do lado do
+// Godot. A lista está repetida aqui de propósito: o CHECK do banco protege a
+// escrita, e isto protege o bundle contra um snapshot restaurado de uma
+// máquina que ainda não tinha a migration.
+// ---------------------------------------------------------------------------
+
+const PRIMARY_STATS = new Set(["hp", "attack", "defense", "speed", "charge"]);
+
+const seenClassCodes = new Set();
+for (const c of classes) {
+  if (seenClassCodes.has(c.code)) {
+    problems.push(
+      `class code ${c.code} appears more than once — the game indexes classes by code, and the `
+        + "second row would silently shadow the first",
+    );
+  }
+  seenClassCodes.add(c.code);
+
+  if (c.primaryStat == null || c.primaryStat === "") {
+    problems.push(
+      `class ${c.code} (${c.name}) has no primaryStat — the game would apply its bonus to `
+        + `nothing. Valid: ${[...PRIMARY_STATS].join(", ")}`,
+    );
+  } else if (!PRIMARY_STATS.has(c.primaryStat)) {
+    problems.push(
+      `class ${c.code} (${c.name}) has primaryStat '${c.primaryStat}', which is not a stat the `
+        + `game computes. Valid: ${[...PRIMARY_STATS].join(", ")}`,
+    );
+  }
+
+  if (typeof c.primaryStatBonusPct !== "number" || !Number.isFinite(c.primaryStatBonusPct)
+      || c.primaryStatBonusPct < 0) {
+    problems.push(
+      `class ${c.code} (${c.name}) has primaryStatBonusPct '${c.primaryStatBonusPct}' — it must `
+        + "be a finite number >= 0, in percentage points (20 means +20%)",
+    );
+  }
+
+  // `work_function` é texto no banco e `JSON.parse` no export. JSON quebrado
+  // derrubaria o script com um stack trace em vez de dizer qual classe está
+  // errada, e o `try` existe só para trocar uma coisa pela outra.
+  if (c.workFunction) {
+    try {
+      const parsed = JSON.parse(c.workFunction);
+      if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+        problems.push(
+          `class ${c.code} (${c.name}) has a workFunction that parses to ${
+            Array.isArray(parsed) ? "an array" : typeof parsed
+          }, not an object — MiningTable reads it as a dictionary`,
+        );
+      }
+    } catch (err) {
+      problems.push(`class ${c.code} (${c.name}) has invalid JSON in workFunction: ${err.message}`);
+    }
+  }
+}
+
+/**
+ * `workFunction` sem `preferredOres`.
+ *
+ * O campo continua no catálogo em linhas antigas e é anotação editorial: as
+ * chaves são semânticas (`fossilAmber`), não códigos `ITM-*`, e nenhum
+ * consumidor do Godot as lê — `MiningTable.preferred_names` responde a mesma
+ * pergunta pelos pesos de `mining_rates`, que já estão em números.
+ */
+function shapeWorkFunction(cls) {
+  if (!cls.workFunction) return null;
+  let parsed;
+  try {
+    parsed = JSON.parse(cls.workFunction);
+  } catch {
+    return null; // já reportado como problema acima; aborta antes de escrever
+  }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  const { preferredOres: _dropped, ...rest } = parsed;
+  return rest;
+}
+
+/**
+ * Toda FK de classe tem de apontar para uma classe que existe.
+ *
+ * A FK do Postgres já garante isso no banco, mas o export lê de uma API que
+ * pode estar servindo um snapshot restaurado, e `code(classById, id)` devolve
+ * `null` sem reclamar quando o id não casa. Uma criatura com `class: null` no
+ * bundle passaria por `MiningTable` como classe vazia (lado ausente = neutro)
+ * e mineraria pelo bioma puro, sem sintoma.
+ */
+for (const [label, rows] of [
+  ["creature", creatures],
+  ["item", allItems],
+  ["relic", relics],
+  ["mining rate", miningRates],
+]) {
+  for (const r of rows) {
+    if (r.classId == null) continue;
+    if (!classById.has(r.classId)) {
+      problems.push(
+        `${label} ${r.code ?? `#${r.id}`} points at class id ${r.classId}, which does not exist `
+          + "in creature_classes",
+      );
+    }
+  }
+}
+
+for (const c of creatures) {
+  if (c.classId == null) {
+    problems.push(
+      `creature ${c.code} (${c.originalName}) has no class — every creature carries exactly one, `
+        + "and the game needs it for the stat bonus, the mining profile and the material drop",
+    );
+  }
+}
 
 /**
  * Itens com preço e efeito. Um item sem linha em `item_stats` sai com valor 0
@@ -356,7 +501,7 @@ const outItems = allItems.map((i) => {
     name: i.name,
     category: i.category,
     // Null for everything except `material` — the class that this drop
-    // belongs to (Loricati/Theria/Draconis). Lets the game ask "what does my
+    // belongs to. Lets the game ask "what does my
     // active creature's class need" directly, instead of scanning drops.
     classCode: code(classById, i.classId),
     effect: i.effect,
@@ -389,6 +534,88 @@ const outRelics = relics.map((r) => {
 });
 
 /**
+ * Resto do set do domador — Amplificador e Encantador. Achatados com números
+ * e receita juntos, mesma razão do Relicário: o jogo não precisa saber que
+ * são três tabelas, só que um modelo tem um efeito e um custo.
+ *
+ * A receita viaja com `itemCode` + `quantity` e NADA mais. Nome e valor do
+ * minério o jogo já resolve por `items` — repetir aqui seria a segunda fonte
+ * que discorda da primeira no dia em que um minério for renomeado.
+ */
+const outEquipment = equipment.map((e) => {
+  const st = equipmentStatByEquipment.get(e.id);
+  if (!st) problems.push(`equipment ${e.code} (${e.name}) has no equipment_stats row`);
+  const lines = (recipesByEquipment.get(e.id) ?? []).map((line) => ({
+    itemCode: code(itemById, line.itemId),
+    quantity: line.quantity,
+  }));
+  return {
+    code: e.code,
+    name: e.name,
+    slot: e.slot,
+    effect: e.effect,
+    notes: e.notes,
+    tier: st?.tier ?? 0,
+    effectCode: st?.effectCode ?? null,
+    effectValue: st?.effectValue ?? 0,
+    recipe: lines.sort((a, b) => String(a.itemCode).localeCompare(String(b.itemCode))),
+  };
+});
+
+/**
+ * Modelo sem receita é inalcançável: a bancada é a única fonte de equipamento
+ * no jogo, e ela lista o que tem receita. Nada quebra — a peça simplesmente
+ * nunca aparece para o jogador, que é o modo de falha silencioso que o
+ * Relicário já paga hoje na aquisição especializada e que não vale repetir.
+ *
+ * Aborta em vez de avisar: ao contrário de um bioma sem taxa (alvo de
+ * conteúdo por preencher), um modelo cadastrado e infabricável é dado que se
+ * contradiz — ele existe no catálogo afirmando ser conquistável.
+ */
+for (const e of outEquipment) {
+  if (e.recipe.length === 0) {
+    problems.push(
+      `equipment ${e.code} (${e.name}) has no equipment_recipes rows — the bench would never `
+        + "list it, so the model is unreachable in game",
+    );
+  }
+}
+
+/**
+ * Ingrediente tem de ser minerável. A bancada gasta o que está na bolsa, e a
+ * bolsa se enche minerando; uma receita que pede `heal` mandaria o jogador
+ * comprar emplastro para fabricar equipamento, e uma que pede `material`
+ * competiria com a subida de nível pelo mesmo drop. Nenhuma das duas é o
+ * laço que este sistema fecha — e as duas passariam sem sintoma.
+ */
+for (const line of equipmentRecipes) {
+  const item = itemById.get(line.itemId);
+  if (item && item.category !== "mineral") {
+    problems.push(
+      `equipment recipe line #${line.id} uses item ${item.code} (${item.name}), category `
+        + `'${item.category}' — recipe ingredients must be category 'mineral'`,
+    );
+  }
+}
+
+/**
+ * Minério que nenhuma taxa de mineração produz não pode ser ingrediente: a
+ * receita seria impossível de completar e o jogador ficaria procurando um
+ * item que o chão não dá. É o espelho da checagem acima — aquela cobre "o
+ * ingrediente é do tipo certo", esta cobre "o ingrediente existe no mundo".
+ */
+const minedItemIds = new Set(miningRates.map((r) => r.itemId));
+for (const line of equipmentRecipes) {
+  const item = itemById.get(line.itemId);
+  if (item && item.category === "mineral" && !minedItemIds.has(line.itemId)) {
+    problems.push(
+      `equipment recipe line #${line.id} needs ${item.code} (${item.name}), which has no `
+        + "mining_rates anywhere — the recipe could never be completed",
+    );
+  }
+}
+
+/**
  * Só quem tem papel de comerciante, com o catálogo já resolvido em códigos.
  * O jogo não deve precisar cruzar duas listas para desenhar uma loja.
  */
@@ -417,21 +644,52 @@ const outMerchants = npcs
 
 /**
  * Só quem tem papel de duelista — o NPC de arena (documento
- * `glifos-e-portais`). Identidade e posicionamento do catálogo; qual
- * criatura o duelista usa e qual Glifo ele concede ficam de propósito fora
- * daqui, como decisão de conteúdo do jogo (mesmo nível que `starter_code`
- * já é em `WorldRoot`) — o catálogo não tem coluna pra isso e não precisa.
+ * `glifos-e-portais`).
+ *
+ * O duelo agora viaja junto: contra quem, em que nível e qual Glifo a vitória
+ * concede saíram das constantes do `WorldPopulator` para `npc_duelists` em
+ * 2026-08. O nível era o caso mais claro — número de balanceamento em código,
+ * que a regra 1 do repo do jogo proíbe —, e a justificativa antiga ("é só uma
+ * arena") deixou de valer quando o modelo passou a prever uma por mapa.
+ *
+ * `grantsGlyph` nulo é estado NORMAL, não falta de dado: só a arena do último
+ * mapa de uma era concede Glifo; as intermediárias são duelo com recompensa
+ * própria. Já a ausência da linha inteira é erro — sem ela o jogo não tem
+ * contra quem encenar a luta.
  */
 const outDuelists = npcs
   .filter((n) => n.role === "duelist")
-  .map((n) => ({
-    code: n.code,
-    name: n.name,
-    faction: n.faction,
-    map: code(mapById, n.mapId),
-    notes: n.notes,
-    appearance: buildAppearance(n),
-  }));
+  .map((n) => {
+    const duel = duelByNpc.get(n.id);
+    if (!duel) {
+      problems.push(
+        `npc ${n.code} (${n.name}) is a duelist with no npc_duelists row — `
+          + `the arena would have no opponent to stage`,
+      );
+    }
+    const opponent = duel ? code(creatureById, duel.opponentCreatureId) : null;
+    if (duel && duel.opponentLevel > combatRules.levelMax) {
+      problems.push(
+        `npc ${n.code} (${n.name}) fields ${opponent} at level ${duel.opponentLevel}, `
+          + `above combat_rules.levelMax (${combatRules.levelMax})`,
+      );
+    }
+    return {
+      code: n.code,
+      name: n.name,
+      faction: n.faction,
+      map: code(mapById, n.mapId),
+      notes: n.notes,
+      appearance: buildAppearance(n),
+      duel: duel
+        ? {
+            opponentCode: opponent,
+            opponentLevel: duel.opponentLevel,
+            grantsGlyph: code(glyphById, duel.grantsGlyphId),
+          }
+        : null,
+    };
+  });
 
 const outAbilities = abilities.map((a) => {
   const s = abilityStatByAbility.get(a.id);
@@ -656,6 +914,105 @@ for (const [mapId, codes] of biomeCodesByMap) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// regiões de bioma dentro do mapa
+// ---------------------------------------------------------------------------
+
+/**
+ * mapId -> [{ code, biome, shape, params }], na ordem de `sortOrder`, que é a
+ * ordem de avaliação: a primeira região que contém o ponto ganha, e a última
+ * costuma ser um catch-all cobrindo o mapa inteiro.
+ *
+ * As coordenadas viajam **normalizadas em ±1** sobre o meio-lado do mapa, e é
+ * essa escolha que faz a partição sobreviver a um redimensionamento do
+ * terreno: mudar o lado do mapa reposiciona as fronteiras junto, sem
+ * reescrever uma linha de catálogo. Quem divide pelo meio-lado é o Godot
+ * (`MapBiomes`), porque o meio-lado é geografia do terreno — daqui não dá
+ * para saber quantos metros o mapa tem, e nem deveria.
+ *
+ * `params` viaja CRU, do jeito que a coluna JSON guarda. Traduzir cada forma
+ * aqui obrigaria o exportador a conhecer a geometria de todo `shape`, e um
+ * `shape` novo passaria a exigir mudança dos dois lados em vez de um.
+ */
+const regionsByMap = new Map();
+for (const r of [...mapBiomeRegions].sort((a, b) => a.sortOrder - b.sortOrder)) {
+  const biomeCode = code(biomeById, r.biomeId);
+  if (biomeCode == null) continue;
+  const list = regionsByMap.get(r.mapId) ?? [];
+  list.push({ code: r.code, biome: biomeCode, shape: r.shape, params: r.params });
+  regionsByMap.set(r.mapId, list);
+}
+
+/**
+ * Bioma que o mapa lista e nenhuma região reivindica fica INALCANÇÁVEL assim
+ * que a partição entra: ele consta do catálogo, aparece em `maps[].biomes`, e
+ * o jogador nunca pisa nele. Hoje é o caso do BIO-004 (Mar Profundo) no PZ-01.
+ *
+ * Avisa em vez de abortar, mesma política das taxas de mineração: é alvo de
+ * conteúdo — o bioma ganha região ou sai do mapa —, não contradição de dado.
+ *
+ * Mapa sem região nenhuma é pulado de propósito: enquanto a partição de um
+ * mapa não foi autorada, "nenhum bioma tem região" é o estado normal dele, e
+ * avisar por bioma transformaria um mapa por fazer em quatro linhas de ruído.
+ */
+for (const [mapId, codes] of biomeCodesByMap) {
+  const claimed = new Set((regionsByMap.get(mapId) ?? []).map((r) => r.biome));
+  if (claimed.size === 0) continue;
+  for (const biomeCode of codes) {
+    if (!claimed.has(biomeCode)) {
+      warnings.push(
+        `biome ${biomeCode} is on map ${code(mapById, mapId)} but no map_biome_region claims it — `
+          + "unreachable once the partition is on",
+      );
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// travessias entre mapas
+// ---------------------------------------------------------------------------
+
+/** mapId de origem -> [{ to, requiredGlyph }], na ordem de `sortOrder`. */
+const connectionsByFromMap = new Map();
+for (const link of [...mapConnections].sort((a, b) => a.sortOrder - b.sortOrder)) {
+  const toCode = code(mapById, link.toMapId);
+  if (toCode == null) continue;
+  const list = connectionsByFromMap.get(link.fromMapId) ?? [];
+  list.push({ to: toCode, requiredGlyph: code(glyphById, link.requiredGlyphId) });
+  connectionsByFromMap.set(link.fromMapId, list);
+}
+
+/**
+ * Travessia que exige um Glifo que nenhuma arena concede é um beco: o
+ * guardião nunca deixa passar e a campanha trava, sem erro em lugar nenhum —
+ * o jogador só conclui que não achou o caminho. Aborta.
+ *
+ * O inverso (Glifo concedido que travessia nenhuma exige) só avisa: é o
+ * estado normal enquanto a era seguinte não tem mapa cadastrado, que é
+ * exatamente onde Daleth está hoje.
+ */
+const glyphsGranted = new Set(
+  npcDuelists.filter((d) => d.grantsGlyphId != null).map((d) => d.grantsGlyphId),
+);
+for (const link of mapConnections) {
+  if (link.requiredGlyphId == null) continue;
+  if (!glyphsGranted.has(link.requiredGlyphId)) {
+    problems.push(
+      `crossing ${code(mapById, link.fromMapId)} -> ${code(mapById, link.toMapId)} requires glyph `
+        + `${code(glyphById, link.requiredGlyphId)}, which no arena grants — the portal could never open`,
+    );
+  }
+}
+for (const glyphId of glyphsGranted) {
+  const required = mapConnections.some((l) => l.requiredGlyphId === glyphId);
+  if (!required) {
+    warnings.push(
+      `glyph ${code(glyphById, glyphId)} is granted by an arena but no crossing requires it — `
+        + "expected while the next era has no map yet",
+    );
+  }
+}
+
 const bundle = {
   dataVersion: changelog[0]?.version ?? "0.00",
   generatedAt: new Date().toISOString(),
@@ -671,11 +1028,27 @@ const bundle = {
     defender: code(elementById, a.defenderElementId),
     multiplier: a.multiplier,
   })),
+  /**
+   * A classe deixou de ser linhagem em 2026-08 e passou a ser especialização
+   * de atributo, então `biologicalScope` saiu daqui junto com a coluna — o
+   * jogo nunca leu, e taxonomia não é mais responsabilidade da classe.
+   *
+   * `description` NÃO viaja: é texto de jogador e nenhuma tela do Godot o
+   * mostra hoje. Campo no bundle é promessa ao jogo (a regra que `creature.role`
+   * custou para ensinar) — quando existir a tela, ele vem junto com o leitor.
+   *
+   * `workFunction` viaja sem `preferredOres`. As chaves ali são semânticas
+   * (`fossilAmber`, `elementalCrystal`), não códigos `ITM-*`; traduzi-las
+   * exigiria um mapa hardcoded no Godot, que é exatamente o que a migração
+   * para dado veio matar — e `MiningTable.preferred_names` já responde a
+   * mesma pergunta pelos pesos, em números.
+   */
   classes: classes.map((c) => ({
     code: c.code,
     name: c.name,
-    biologicalScope: c.biologicalScope,
-    workFunction: c.workFunction ? JSON.parse(c.workFunction) : null,
+    primaryStat: c.primaryStat,
+    primaryStatBonusPct: c.primaryStatBonusPct,
+    workFunction: shapeWorkFunction(c),
   })),
   maps: maps.map((m) => ({
     code: m.code,
@@ -691,12 +1064,38 @@ const bundle = {
      * que ninguém consome.
      */
     biomes: biomeCodesByMap.get(m.id) ?? [],
+    /**
+     * Onde cada bioma fica DENTRO do mapa, em coordenadas normalizadas ±1.
+     * É o que permite `MapBiomes.biome_at()` responder por posição em vez de
+     * o mundo declarar um bioma para o mapa inteiro.
+     *
+     * Este campo e o leitor do lado do Godot nasceram no mesmo commit, e é
+     * regra que continuem juntos: campo no bundle é promessa ao jogo, e
+     * exportar partição que ninguém consulta recria o contrato-que-mente que
+     * a auditoria de 2026-08 foi consertar.
+     */
+    biomeRegions: regionsByMap.get(m.id) ?? [],
+    /**
+     * Para onde se sai deste mapa, e a que preço. `requiredGlyph` nulo é
+     * passagem livre — travessia dentro de uma era; com código, é o guardião
+     * do portal exigindo o Glifo na saída da era.
+     *
+     * ONDE o guardião fica não está aqui: posição é layout de cena, e mora
+     * no repo do jogo com os outros pontos fixos. O que viaja é a topologia
+     * e o requisito.
+     */
+    connections: connectionsByFromMap.get(m.id) ?? [],
   })),
   biomes: biomes.map((b) => ({
     code: b.code,
     name: b.name,
     predominantElements: b.predominantElements,
   })),
+  /**
+   * Os Glifos existentes. O jogo compara por `code` (é o que o save guarda) e
+   * mostra `name` — é o que permite renomear a letra sem invalidar save.
+   */
+  glyphs: glyphs.map((g) => ({ code: g.code, name: g.name })),
   abilities: outAbilities,
   creatures: outCreatures,
   /**
@@ -706,6 +1105,7 @@ const bundle = {
    */
   items: outItems,
   relics: outRelics,
+  equipment: outEquipment,
   economy: {
     currencyName: economyRules.currencyName,
     currencyNamePlural: economyRules.currencyNamePlural,
@@ -738,7 +1138,7 @@ const bundle = {
 // o ritmo cai no neutro, e um peso órfão some na normalização. É justamente
 // por isso que precisam abortar aqui — os três transformam um número que o
 // designer escreveu em nada, silenciosamente, e o sintoma ("a mineração da
-// Theria parece igual à da Draconis") não aponta para a causa.
+// Kaíra parece igual à da Yaruki") não aponta para a causa.
 // ---------------------------------------------------------------------------
 
 const mineralIds = new Set(minerals.map((i) => i.id));
@@ -758,14 +1158,24 @@ for (const r of miningRates) {
   }
 }
 
-// Toda classe com criatura no elenco precisa de pesos e de perfil de
-// trabalho. O elenco é fechado em 3 classes, então isto não é um gate que
-// aperta com o tempo — é o que garante que classe nova não entre muda.
+// Toda classe **com criatura no elenco** precisa de pesos e de perfil de
+// trabalho. O gate é o elenco, não a lista de classes, e é isso que faz ele
+// continuar honesto agora que o elenco abriu de 3 para 5: classe recém-criada
+// e ainda sem criatura não tem o que balancear, e reprovar nela transformaria
+// meta de conteúdo em erro estrutural. No instante em que a primeira criatura
+// entra nela, os dois viram obrigatórios.
 const castClassIds = new Set(creatures.map((c) => c.classId));
 const ratesByClass = new Set(miningRates.filter((r) => r.classId != null).map((r) => r.classId));
 
+const unstaffed = [];
 for (const cls of classes) {
-  if (!castClassIds.has(cls.id)) continue;
+  if (!castClassIds.has(cls.id)) {
+    const missing = [];
+    if (!ratesByClass.has(cls.id)) missing.push("mining_rates");
+    if (!cls.workFunction) missing.push("workFunction");
+    if (missing.length > 0) unstaffed.push(`${cls.code} ${cls.name} (sem ${missing.join(" e ")})`);
+    continue;
+  }
   if (!ratesByClass.has(cls.id)) {
     problems.push(
       `class ${cls.code} (${cls.name}) has creatures in the cast but no mining_rates — `
@@ -776,6 +1186,41 @@ for (const cls of classes) {
     problems.push(
       `class ${cls.code} (${cls.name}) has creatures in the cast but no workFunction — `
         + `mining speed falls back to neutral and the role label comes out empty`,
+    );
+  }
+}
+
+if (unstaffed.length > 0) {
+  warnings.push(
+    `classe sem elenco e sem tuning de mineração: ${unstaffed.join(", ")} — nada quebra enquanto `
+      + "não houver criatura nela, mas a primeira que entrar torna os dois obrigatórios",
+  );
+}
+
+/**
+ * Material de progressão por classe — meta de conteúdo, não invariante.
+ *
+ * `items.class_id` liga um `category: 'material'` a uma classe, e subir de
+ * nível gasta o material da classe da própria criatura. Classe sem material é
+ * um beco para quem estiver nela — mas só existe beco se houver alguém lá
+ * dentro. Sem elenco é avisar; com elenco, `progression_rules` cobraria um
+ * item que não existe e o jogador ficaria travado com XP cheio.
+ */
+const materialByClass = new Set(
+  allItems.filter((i) => i.category === "material" && i.classId != null).map((i) => i.classId),
+);
+for (const cls of classes) {
+  if (materialByClass.has(cls.id)) continue;
+  if (castClassIds.has(cls.id)) {
+    problems.push(
+      `class ${cls.code} (${cls.name}) has creatures in the cast but no material item `
+        + "(category 'material' with this class_id) — those creatures could never level up, "
+        + "because levelling spends the material of the levelling creature's own class",
+    );
+  } else {
+    warnings.push(
+      `classe ${cls.code} (${cls.name}) ainda não tem material de progressão — autorar antes de `
+        + "dar elenco a ela, senão a criatura sobe de XP e nunca sobe de nível",
     );
   }
 }
@@ -891,5 +1336,5 @@ console.log(`characters:  ${characterCopies} files mirrored to ${resolve(OUT_REP
 console.log(
   `contents:    ${bundle.creatures.length} creatures, ${bundle.abilities.length} abilities, ` +
     `${bundle.elementalAdvantages.length} elemental pairs, ${bundle.classes.length} classes, ` +
-    `${bundle.relics.length} relics`,
+    `${bundle.relics.length} relics, ${bundle.equipment.length} equipment`,
 );

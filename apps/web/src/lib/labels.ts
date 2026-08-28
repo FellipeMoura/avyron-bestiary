@@ -112,3 +112,123 @@ export function formatCurrency(
 export function plural(n: number, singular: string, plural?: string): string {
   return n === 1 ? singular : (plural ?? `${singular}s`);
 }
+
+export type PrimaryStat = "hp" | "attack" | "defense" | "speed" | "charge";
+
+/**
+ * The stat a class specialises in, in the words the player sees.
+ *
+ * The tokens are the game's own five stats, and two of the labels do not
+ * translate them literally on purpose. `speed` decides who acts first in a
+ * turn-based fight, which is what "velocidade de ataque" means to a player;
+ * `charge` is the Despertar meter, the only sustain resource a creature has,
+ * which is what the design calls Stamina. Naming the columns `attackSpeed`
+ * and `stamina` instead would have created a second vocabulary for stats the
+ * game already computes — the split lives here, where every other enum
+ * translation lives.
+ */
+export const PRIMARY_STAT_LABEL: Record<PrimaryStat, string> = {
+  hp: "HP",
+  attack: "Ataque",
+  defense: "Defesa",
+  speed: "Velocidade de Ataque",
+  charge: "Stamina",
+};
+
+export function primaryStatLabel(stat: string | null | undefined): string {
+  if (!stat) return "—";
+  return PRIMARY_STAT_LABEL[stat as PrimaryStat] ?? stat;
+}
+
+// ---------------------------------------------------------------------------
+
+export type AbilityEffect =
+  | "damage"
+  | "buff_attack"
+  | "buff_defense"
+  | "debuff_attack"
+  | "debuff_defense"
+  | "heal"
+  | "charge_gain";
+
+export const ABILITY_EFFECT_LABEL: Record<AbilityEffect, string> = {
+  damage: "dano",
+  buff_attack: "eleva ataque",
+  buff_defense: "eleva defesa",
+  debuff_attack: "reduz ataque",
+  debuff_defense: "reduz defesa",
+  heal: "cura",
+  charge_gain: "ganho de carga",
+};
+
+/**
+ * O papel de trabalho da classe na mineração, vindo do JSON de
+ * `creature_classes.workFunction`. São cinco tokens em inglês no banco porque
+ * é o que o Godot lê; os nomes abaixo são os que o designer usa para falar
+ * deles, e cada um precisa soar diferente dos outros quatro — "escavadora" e
+ * "cavadora" seriam a mesma palavra para quem lê a lista de uma vez.
+ */
+export const WORK_ROLE_LABEL: Record<string, string> = {
+  excavator: "escavadora",
+  burrower: "tuneleira",
+  prospector: "garimpeira",
+  sifter: "peneiradora",
+  crusher: "britadeira",
+};
+
+export function workRoleLabel(role: string | null | undefined): string {
+  if (!role) return "—";
+  return WORK_ROLE_LABEL[role] ?? role;
+}
+
+/** `{speedModifier, role}` serializado em texto. Linhas antigas podem trazer
+ *  chaves extras (`preferredOres`) que não viajam mais no bundle. */
+export interface WorkFunction {
+  speedModifier?: number;
+  role?: string;
+}
+
+export function parseWorkFunction(raw: string | null | undefined): WorkFunction | null {
+  if (!raw) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed as WorkFunction;
+  } catch {
+    return null;
+  }
+}
+
+/** `0,85` vira `−15% de velocidade`; `1` vira `velocidade padrão`. */
+export function speedModifierSummary(modifier: number | undefined): string {
+  if (modifier === undefined) return "—";
+  if (modifier === 1) return "velocidade padrão do trabalho";
+  const delta = (modifier - 1) * 100;
+  return `${delta > 0 ? "+" : "−"}${formatNumber(Math.abs(delta), 0)}% de velocidade`;
+}
+
+/**
+ * `×2` / `×0,5` / `×1`, com a leitura junto. O multiplicador cru sozinho é
+ * ambíguo na direção: quem lê `0,5` numa linha de "defende contra" precisa
+ * saber se é bom ou ruim para quem está sendo mostrado.
+ */
+export function advantageLabel(multiplier: number): string {
+  if (multiplier > 1) return "vantagem";
+  if (multiplier < 1) return "desvantagem";
+  return "neutro";
+}
+
+/**
+ * Valor efetivo de um stat, exatamente como o jogo calcula:
+ * `floor(base × (1 + growthRate × (nível − 1)) × (1 + bônus/100))`, e o
+ * bônus da classe entra em um stat só. Espelhar a conta aqui é o que permite
+ * a ficha dizer "no nível 50" sem que alguém precise abrir o Godot.
+ */
+export function effectiveStat(
+  base: number,
+  growthRate: number,
+  level: number,
+  bonusPct = 0,
+): number {
+  return Math.floor(base * (1 + growthRate * (level - 1)) * (1 + bonusPct / 100));
+}

@@ -2,7 +2,7 @@
 
 Web app que substitui `.docx`/`.xlsx` como fonte de verdade de um jogo 3D de coleção de criaturas com tema paleontológico. **Este repositório não é o jogo** — o jogo em Godot vive num repositório irmão, alimentado por `pnpm game:export`.
 
-O jogo chama-se **Avyron**: Godot, câmera isométrica ortográfica travada em 30°/45°, exploração em tempo real e combate por turnos. As classes são Loricati, Theria e Draconis; as eras, Aetheris, Titanor e Novaterra — nomes de exibição, com os códigos e enums do banco inalterados.
+O jogo chama-se **Avyron**: Godot, câmera isométrica ortográfica travada em 30°/45°, exploração em tempo real e combate por turnos. São cinco classes e três eras (Aetheris, Titanor, Novaterra), todas com nomes ficcionais de exibição — os códigos e os enums do banco seguem inalterados. Classe é especialização de atributo, não linhagem: quais existem e o que cada uma especializa está em `GET /creature-classes`.
 
 ## Dois públicos
 
@@ -99,7 +99,7 @@ game/
 │   │       ├── app.ts, env.ts, index.ts
 │   └── web/                    Vite + React 19 + TanStack Query + Tailwind
 │       └── src/
-│           ├── routes/         Home, Bestiary, CreatureDetail, Items, Documents, Changelog
+│           ├── routes/         Home, Bestiary, CreatureDetail, Maps, Items, Elements, Documents, Changelog
 │           ├── components/     AppShell, Filter, CreatureViewer
 │           ├── hooks/useApi.ts
 │           ├── lib/            api client, labels PT, cn helper
@@ -122,6 +122,8 @@ game/
 **Catálogo:** `elements`, `elemental-advantages`, `creature-classes`, `creatures`, `awakenings`, `maps`, `biomes`, `map-biomes`, `abilities`, `items`, `npcs`, `missions`, `drops`, `documents`, `changelog`.
 
 **Camada de números** (o que o jogo executa): `combat-rules` e `economy-rules` (singletons de tuning), `creature-stats`, `ability-stats`, `capture-rules`, `creature-abilities`, `item-stats`, `mining-rates`, `merchant-offers`.
+
+**Set do domador:** `relics`/`relic-stats`/`relic-rules` (captura) e `equipment`/`equipment-stats`/`equipment-recipes` (Amplificador e Encantador — passivos de combate fabricados de minério). São dois trios e não um porque as colunas não se sobrepõem em nada: capacidade de slot e curva de captura de um lado, código de efeito e receita do outro. Ver documento `equipamentos`.
 
 Mais o endpoint especial `GET /context` — snapshot markdown do estado do projeto, primeira leitura de qualquer agente.
 
@@ -150,11 +152,14 @@ O vínculo criatura ↔ modelo é N:1 e se faz na própria ficha (`/bestiary/:co
 
 `GET /documents/{slug}` faz content negotiation: `Accept: text/markdown` devolve markdown puro (token cheap); JSON caso contrário.
 
-## UI (5 telas)
+## UI (8 telas)
 
-- `/bestiary` — lista com filtros era/classe/elemento sincronizados na URL
+- `/bestiary` — lista com filtros era/classe/elemento/mapa sincronizados na URL
 - `/bestiary/:code` — a ficha, com hero number CRT-XXX, viewer 3D em turntable (clipe `Idle` em loop, botão dev de vínculo de modelo) + comparador base ↔ despertar lado a lado
+- `/maps` — a corrente de mapas e o chão de cada um: o plano do mapa desenhado a partir de `map_biome_regions` e **resolvido** pela regra do schema (primeira região que casa, em `sortOrder`, vence; o resto cai no fallback declarado), a travessia de biomas com a fração do plano que cada um ocupa, quem habita o mapa, o que a saída cobra, e o balanço dos Glifos. É a tela que torna visível o bioma que está na travessia e não ocupa chão nenhum
+- `/elements` — a paleta canônica dos elementos, e a única tela de escrita do app (ver CLAUDE.md)
 - `/items` — catálogo editorial e camada de números lado a lado: preço, preço de revenda derivado do `sellRatio`, par `effectCode`/`effectValue` lido na unidade certa, oferta de comerciante e peso de mineração por classe e bioma. Fecha com a legenda do que cada campo decide no jogo
+- `/equipment` — os dois slots lado a lado, cada modelo com efeito, tier e receita. Mostra o número que **nenhuma coluna guarda**: o custo em óbolos da receita (soma de `item_stats.value × quantidade`), que é onde mora a decisão de design do sistema — Amplificador e Encantador do mesmo tier custam igual, e o que separa as duas linhas é onde se cava, não quanto se paga. Os dois slots ficam lado a lado justamente para essa comparação ser lida sem planilha
 - `/documents` + `/documents/:slug` — lista de capítulos com status colorido; reader com markdown renderizado
 - `/changelog` — timeline vertical, motivo/impacto em duas colunas
 

@@ -1,6 +1,6 @@
 import type { RequestHandler } from "express";
 import { dropsService } from "./DropsService";
-import type { BatchUpsertDropsBody, UpsertDropBody } from "./DropsTypes";
+import type { BatchUpsertDropsBody, DeleteDropBody, UpsertDropBody } from "./DropsTypes";
 
 export const dropsController = {
   list: (async (req, res) => {
@@ -21,5 +21,8 @@ export const dropsController = {
   }) satisfies RequestHandler,
   batchUpsert: (async (req, res) => {
     res.status(201).json(await dropsService.batchUpsert(req.body as BatchUpsertDropsBody));
+  }) satisfies RequestHandler,
+  delete: (async (req, res) => {
+    res.status(200).json(await dropsService.remove(req.body as DeleteDropBody));
   }) satisfies RequestHandler,
 };

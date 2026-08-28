@@ -6,7 +6,9 @@ import { CreatureDetail } from "./routes/CreatureDetail";
 import { DocumentDetail, DocumentsList } from "./routes/Documents";
 import { Elements } from "./routes/Elements";
 import { Home } from "./routes/Home";
+import { Equipment } from "./routes/Equipment";
 import { Items } from "./routes/Items";
+import { Maps } from "./routes/Maps";
 
 export function App() {
   return (
@@ -17,6 +19,8 @@ export function App() {
           <Route path="/bestiary" element={<Bestiary />} />
           <Route path="/bestiary/:code" element={<CreatureDetail />} />
           <Route path="/items" element={<Items />} />
+          <Route path="/equipment" element={<Equipment />} />
+          <Route path="/maps" element={<Maps />} />
           <Route path="/elements" element={<Elements />} />
           <Route path="/documents" element={<DocumentsList />} />
           <Route path="/documents/:slug" element={<DocumentDetail />} />

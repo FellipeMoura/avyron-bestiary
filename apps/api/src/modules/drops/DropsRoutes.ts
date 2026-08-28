@@ -9,6 +9,8 @@ import { dropsController } from "./DropsController";
 import {
   BatchUpsertDropsBodySchema,
   BatchUpsertResponseSchema,
+  DeleteDropBodySchema,
+  DeletedResponseSchema,
   DropSchema,
   ListDropsQuerySchema,
   UpsertDropBodySchema,
@@ -72,4 +74,35 @@ dropsRouter.post(
   rejectForbiddenTerms,
   validateBody(UpsertDropBodySchema),
   dropsController.upsert,
+);
+
+registry.registerPath({
+  method: "delete",
+  path: "/drops",
+  tags: [TAG],
+  security: [{ ApiKey: [] }],
+  summary: "Remove one drop (natural key: creature + item + condition)",
+  description:
+    "Omitting `condition` addresses the row whose condition is null, matching the upsert's "
+    + "conflict target — it never removes every condition for the pair. Use this instead of "
+    + "re-POSTing with `chance: 0`: a row with chance 0 still asserts the pairing, and the "
+    + "export reads the row's existence.",
+  request: {
+    body: { content: { "application/json": { schema: DeleteDropBodySchema } }, required: true },
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: DeletedResponseSchema } },
+      description: "Deleted",
+    },
+    404: { description: "Creature does not drop this item under this condition" },
+  },
+});
+dropsRouter.delete(
+  "/",
+  writeLimiter,
+  requireApiKey,
+  rejectForbiddenTerms,
+  validateBody(DeleteDropBodySchema),
+  dropsController.delete,
 );

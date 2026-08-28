@@ -3,6 +3,7 @@ import { abilitiesService } from "./AbilitiesService";
 import type {
   BatchCreateAbilitiesBody,
   CreateAbilityBody,
+  DeleteAbilityBody,
   UpdateAbilityBody,
 } from "./AbilitiesTypes";
 
@@ -34,5 +35,11 @@ export const abilitiesController = {
   }) satisfies RequestHandler,
   batchCreate: (async (req, res) => {
     res.status(201).json(await abilitiesService.batchCreate(req.body as BatchCreateAbilitiesBody));
+  }) satisfies RequestHandler,
+
+  delete: (async (req, res) => {
+    res.status(200).json(
+      await abilitiesService.remove(req.params.code!, req.body as DeleteAbilityBody),
+    );
   }) satisfies RequestHandler,
 };

@@ -45,7 +45,7 @@ interface Row {
 
 // Element mapping (existing seed):
 //   ELE-001 Fogo   ELE-002 Agua   ELE-003 Natureza   ELE-004 Terra
-//   ELE-005 Eletricidade   ELE-006 Gelo
+//   ELE-005 Eletricidade
 // Class mapping — the three lineages in scope (in-world name / real clade):
 //   CLS-001 Loricati / artropodes   CLS-002 Theria / sinapsideos
 //   CLS-003 Draconis / sauropsideos
