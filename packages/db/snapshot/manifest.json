@@ -1,5 +1,5 @@
 {
-  "version": "0.441",
+  "version": "0.447",
   "tables": {
     "elements": 5,
     "creature_classes": 5,
@@ -8,11 +8,11 @@
     "glyphs": 2,
     "items": 22,
     "design_documents": 36,
-    "changelog": 441,
+    "changelog": 447,
     "elemental_advantages": 10,
     "map_biomes": 14,
     "map_connections": 2,
-    "map_biome_regions": 7,
+    "map_biome_regions": 6,
     "npcs": 2,
     "creatures": 60,
     "abilities": 27,
