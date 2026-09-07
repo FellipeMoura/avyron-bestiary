@@ -20,9 +20,9 @@ import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
  * between themselves), EasyAnimated says `Rat_Run`/`Wasp_Flying` — already
  * renamed to canonical names by the FBX→glb conversion step, so `CLIP_MAP`
  * below has nothing left to do for that group and every clip passes through
- * unmapped-but-already-correct. Normalizing here means the game and the
- * viewer address every model by the same clip names and never learn the
- * packs existed.
+ * unmapped-but-already-correct. Normalizing here means the game (and any
+ * future reader) addresses every model by the same clip names and never
+ * learns the packs existed.
  *
  * Output: apps/web/public/models/placeholders/<group>/<Name>.glb, plus a
  * manifest.json alongside listing every model (url, clips, height) — the

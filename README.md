@@ -100,7 +100,7 @@ game/
 │   └── web/                    Vite + React 19 + TanStack Query + Tailwind
 │       └── src/
 │           ├── routes/         Home, Bestiary, CreatureDetail, Maps, Items, Elements, Documents, Changelog
-│           ├── components/     AppShell, Filter, CreatureViewer
+│           ├── components/     AppShell, Filter, CardImage, CodeIcon
 │           ├── hooks/useApi.ts
 │           ├── lib/            api client, labels PT, cn helper
 │           └── App.tsx, main.tsx, index.css
@@ -144,11 +144,11 @@ O export **aborta sem escrever nada** se alguma criatura estiver sem stats, sem 
 
 ## Modelos 3D: placeholder único + Meshy AI definitivo
 
-Desde 2026-09, o repo Godot usa só **um** placeholder genérico (`dungeon/Imp.glb`) para toda criatura sem modelo definitivo — os packs CC0 do Quaternius (`big`/`flying`/`easyanimated`, e o Puglin do `dungeon`) foram removidos de lá porque a recoloração por elemento que os distinguia também saiu (ver `CLAUDE.md`, "Não existe mais cor por elemento"). Aqui no bestiário os scripts de conversão continuam existindo (`pnpm models:placeholders`, `pnpm models:dungeon`) e o botão "vincular/alterar modelo" ainda funciona — as fontes em `placeholder_models/` (packs CC0, fontes `.blend` + glTF) convertem pra `.glb` servível em `apps/web/public/models/placeholders/<grupo>/`, normalizando os clipes de animação (`Idle`, `Walk`, `Run`, `Attack`, `Attack2`, `Attack3`, `HitReact`, `Death`, `Swim`, `Swim_Idle`, `Dodge`…) e emitindo o `manifest.json` que a ficha lê — só que o repo Godot não puxa mais os pacotes por família.
+Desde 2026-09, o repo Godot usa só **um** placeholder genérico (`dungeon/Imp.glb`) para toda criatura sem modelo definitivo — os packs CC0 do Quaternius (`big`/`flying`/`easyanimated`, e o Puglin do `dungeon`) foram removidos de lá porque a recoloração por elemento que os distinguia também saiu (ver `CLAUDE.md`, "Não existe mais cor por elemento"). Aqui no bestiário os scripts de conversão continuam existindo (`pnpm models:placeholders`, `pnpm models:dungeon`) — as fontes em `placeholder_models/` (packs CC0, fontes `.blend` + glTF) convertem pra `.glb` servível em `apps/web/public/models/placeholders/<grupo>/`, normalizando os clipes de animação (`Idle`, `Walk`, `Run`, `Attack`, `Attack2`, `Attack3`, `HitReact`, `Death`, `Swim`, `Swim_Idle`, `Dodge`…) e emitindo o `manifest.json` que descreve cada corpo — só que o repo Godot não puxa mais os pacotes por família.
 
 **Modelo Meshy AI definitivo** (1:1 com a criatura, animado, sem recoloração) é `pnpm models:meshy` (`scripts/convert-meshy.mjs`): normaliza os clipes de um export do Meshy — preferencialmente um `.glb` único (a opção que o Meshy libera), com suporte legado a export multi-arquivo — e o resultado segue a MESMA convenção do `.glb` estático legado (`<CODE>.glb` solto em `apps/web/public/models/`, `syncModels` liga o `modelUrl` pelo nome do arquivo). Piloto: CRT-002 (Anomalocaris). Ver `CLAUDE.md` pro pipeline completo e a lição do bug de escala que apareceu na integração.
 
-O vínculo criatura ↔ placeholder é N:1 e se faz na própria ficha (`/bestiary/:code`), pelo botão **"vincular/alterar modelo"** (dev only): lista os modelos por família, mostra cada um em 3D animado e, abaixo, quais criaturas já usam aquele corpo. Confirmar dispara o PATCH normal da API — changelog e versão automáticos. Um corpo Meshy definitivo não passa por esse botão — o `syncModels` liga sozinho pelo nome do arquivo.
+O vínculo criatura ↔ placeholder é N:1 e se faz por `PATCH /creatures/{code}` com `modelUrl` — changelog e versão automáticos. O bestiário **não renderiza modelo 3D** desde 2026-09 (o viewer three.js e o botão "vincular/alterar modelo" da ficha saíram); ele serve os arquivos e o vínculo, e o jogo é quem renderiza. Um corpo Meshy definitivo não precisa nem do PATCH — o botão "sincronizar modelos" da listagem (`syncModels`) liga sozinho pelo nome do arquivo.
 
 **Props de bioma** seguem um pipeline paralelo: `pnpm models:biomes` prepara os packs de `placeholder_models/biomes/` para `apps/web/public/models/biomes/`. Dois lotes, dois tratamentos: o Stylized Nature MegaKit (Quaternius, CC0) vai para `megakit/` como `.gltf` com texturas reduzidas a 1024² e mantidas **compartilhadas** (empacotar em `.glb` duplicaria a textura da casca em cada árvore); os props aquáticos do Meshy (PZ-01) vão para `aquatic/` como `.glb` individuais — cada um tem textura própria — com o mesmo downscale e a checagem de emissivo do pipeline Meshy (remover textura emissiva exige zerar o `emissiveFactor`). Não há vínculo por criatura: o `game:export` espelha o diretório inteiro e a cena do mapa no Godot consome direto. O Kenney Nature Kit também está em `placeholder_models/biomes/` mas foi preterido: escala de miniatura (grade 1×1) e linguagem geométrica que briga com as criaturas.
 
@@ -157,7 +157,7 @@ O vínculo criatura ↔ placeholder é N:1 e se faz na própria ficha (`/bestiar
 ## UI (8 telas)
 
 - `/bestiary` — lista com filtros era/classe/elemento/mapa sincronizados na URL
-- `/bestiary/:code` — a ficha, com hero number CRT-XXX, viewer 3D em turntable (clipe `Idle` em loop, botão dev de vínculo de modelo) + comparador base ↔ despertar lado a lado
+- `/bestiary/:code` — a ficha, com hero number CRT-XXX, arte do card + comparador base ↔ despertar lado a lado
 - `/maps` — a corrente de mapas e o chão de cada um: o plano do mapa desenhado a partir de `map_biome_regions` e **resolvido** pela regra do schema (primeira região que casa, em `sortOrder`, vence; o resto cai no fallback declarado), a travessia de biomas com a fração do plano que cada um ocupa, quem habita o mapa, o que a saída cobra, e o balanço dos Glifos. É a tela que torna visível o bioma que está na travessia e não ocupa chão nenhum
 - `/elements` — a paleta canônica dos elementos, e a única tela de escrita do app (ver CLAUDE.md)
 - `/items` — catálogo editorial e camada de números lado a lado: preço, preço de revenda derivado do `sellRatio`, par `effectCode`/`effectValue` lido na unidade certa, oferta de comerciante e peso de mineração por classe e bioma. Fecha com a legenda do que cada campo decide no jogo

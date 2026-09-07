@@ -22,7 +22,7 @@ import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
  * intentionally thin: read each .glb just enough to confirm it has no baked
  * animation and to measure height, copy the file byte-for-byte (no
  * gltf-transform re-serialize — nothing here needs rewriting), and write the
- * SAME manifest.json contract `usePlaceholderModels.ts` already reads,
+ * SAME manifest.json contract convert-placeholders.mjs already writes,
  * merging into (not replacing) what convert-placeholders.mjs wrote.
  *
  * `clips` in the manifest entry is informational, not read from the file —

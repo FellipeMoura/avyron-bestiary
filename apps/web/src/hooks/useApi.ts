@@ -90,34 +90,6 @@ export function useSyncModels() {
   });
 }
 
-/**
- * Dev-only write action (see CLAUDE.md, regra 1): aponta o `modelUrl` de uma
- * criatura para um placeholder compartilhado, via PATCH já existente na API.
- * `reason`/`impact` são exigidos pelo changelog — o servidor grava a entrada
- * e incrementa a versão sozinho.
- */
-export function useSetCreatureModel() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: {
-      code: string;
-      modelUrl: string;
-      reason: string;
-      impact: string;
-    }) =>
-      unwrap(
-        await api.PATCH("/creatures/{code}", {
-          params: { path: { code: input.code } },
-          headers: { "x-api-key": import.meta.env.VITE_API_KEY ?? "" },
-          body: { modelUrl: input.modelUrl, reason: input.reason, impact: input.impact },
-        }),
-      ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["creatures"] });
-    },
-  });
-}
-
 // ---------- awakenings ----------
 export function useAwakeningByCreature(creatureCode: string | undefined) {
   return useQuery({
@@ -468,8 +440,8 @@ export function useChangelog(limit = 100) {
 /**
  * Edição da paleta de um elemento.
  *
- * É a primeira escrita do frontend que altera CONTEÚDO do catálogo (as duas
- * anteriores mexem em `modelUrl`, que é ligação com asset). Não abre exceção
+ * É a primeira escrita do frontend que altera CONTEÚDO do catálogo (a
+ * anterior mexe em `modelUrl`, que é ligação com asset). Não abre exceção
  * à regra do `DATA_WORKFLOW.md`: a API continua sendo a única via de escrita,
  * `reason`/`impact` continuam obrigatórios e o changelog registra igual. O que
  * muda é só quem monta o corpo da requisição — um formulário em vez de um

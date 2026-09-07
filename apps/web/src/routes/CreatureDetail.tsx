@@ -1,7 +1,5 @@
 import { Link, useParams } from "react-router-dom";
 import { CardImage } from "../components/CardImage";
-import { CreatureViewer } from "../components/CreatureViewer";
-import { ModelLinkDialog } from "../components/ModelLinkDialog";
 import {
   useAbilities,
   useAbilityStats,
@@ -146,12 +144,6 @@ export function CreatureDetail() {
           code={c.code}
           className="hidden w-40 rounded-sm border border-graphite/40 object-cover md:block"
         />
-      </section>
-
-      {/* 3D turntable — the only place camera rotation is allowed (see camera-e-perspectiva doc) */}
-      <section className="mt-12">
-        <CreatureViewer url={c.modelUrl} />
-        <ModelLinkDialog creatureCode={c.code} currentUrl={c.modelUrl} />
       </section>
 
       {/* comparator */}

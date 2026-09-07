@@ -133,17 +133,11 @@ Se essa pasta se perder, o caminho de volta é re-baixar do Meshy.
 
 ---
 
-## O que a aplicação precisa para carregar isto
+## Quem carrega isto
 
-`KHR_texture_basisu` é marcada como **obrigatória**. Um `GLTFLoader` sem `KTX2Loader` configurado não degrada — ele falha o carregamento.
+`KHR_texture_basisu` é marcada como **obrigatória**. Um importador glTF sem suporte a KTX2 não degrada — ele falha o carregamento.
 
-O wiring vive em [`apps/web/src/components/CreatureViewer.tsx`](../apps/web/src/components/CreatureViewer.tsx):
-
-- `KTX2Loader` em instância única de escopo de módulo (cada instância abre o próprio pool de workers).
-- `detectSupport(gl)` escolhe o alvo de transcodificação conforme a GPU (BC7, ASTC, ETC2…). Precisa rodar antes da primeira transcodificação.
-- Os binários do transcoder são servidos de `apps/web/public/basis/` (~570 KB), copiados de `three/examples/jsm/libs/basis/`. **Esses arquivos são versionados de propósito** — sem eles a aplicação não carrega modelo nenhum.
-
-`three-stdlib` é dependência **explícita** de `apps/web` porque o drei tipa o callback `extendLoader` com o `GLTFLoader` dela, e sob pnpm estrito importar dependência transitiva quebra o build.
+O único consumidor dos `.glb` hoje é o jogo em Godot, que importa KTX2/Basis nativamente. O bestiário **não renderiza mais modelo 3D** (o viewer three.js da ficha foi removido em 2026-09); ele só serve os arquivos em `apps/web/public/models/` e mantém o vínculo `modelUrl`, que o `pnpm game:export` espelha no repo do jogo.
 
 ---
 
@@ -153,7 +147,6 @@ O wiring vive em [`apps/web/src/components/CreatureViewer.tsx`](../apps/web/src/
 2. **Estático:** salve como `CRT-XXX.glb` (sem sufixo de versão) direto em `apps/web/public/models/`. **Animado:** rode `pnpm models:meshy -- --source <arquivo ou pasta> --out apps/web/public/models/CRT-XXX.glb` primeiro — ele normaliza os nomes dos clipes pro vocabulário canônico (`Idle`/`Walk`/`Run`/`Attack`/`Attack2`/`Attack3`/`HitReact`/`Death`/`Swim`/`Swim_Idle`/`Dodge`) e já escreve no lugar certo.
 3. `pnpm models:optimize`
 4. Conferir a saída: geometria inalterada, redução de ~45–50% no arquivo.
-5. `pnpm build` — `dist/` é saída de build e não se atualiza sozinho; sem rebuild, `vite preview` continua servindo o arquivo antigo.
-6. Abrir a ficha da criatura e confirmar que renderiza.
+5. `pnpm game:export` e abrir a criatura no jogo para confirmar que renderiza.
 
 Se o modelo aparecer preto ou branco chapado, o suspeito número um é o `emissiveFactor` — ver a armadilha acima.
