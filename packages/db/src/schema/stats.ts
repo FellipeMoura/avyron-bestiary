@@ -188,6 +188,38 @@ export const captureRules = pgTable(
 );
 
 /**
+ * How often this species comes up when the world rolls a wild spawn, 1:1 with
+ * a creature — same satellite shape as `capture_rules` right above.
+ *
+ * It is a RELATIVE weight, not a probability: the game normalises across
+ * whatever pool the map offers, so 2.0 means "twice as likely as a 1.0 in the
+ * same pool", and the numbers never have to sum to anything. Whether a spawn
+ * happens at all is a different question, answered per-biome by
+ * `biomes.spawnChance`; this column only settles *which* creature it is.
+ *
+ * Weight must be > 0, not >= 0. A species that should never appear in the wild
+ * simply has no map (`creatures.mapId` is nullable and the pool is built from
+ * it), so zero would be a second way to say the same thing — and a pool where
+ * every row is zero has no valid draw at all.
+ */
+export const creatureSpawnRules = pgTable(
+  "creature_spawn_rules",
+  {
+    id: serial("id").primaryKey(),
+    creatureId: integer("creature_id")
+      .notNull()
+      .unique()
+      .references(() => creatures.id, { onDelete: "cascade" }),
+    spawnWeight: real("spawn_weight").notNull().default(1),
+    notes: text("notes"),
+    ...timestamps,
+  },
+  (t) => ({
+    weightPositive: check("creature_spawn_rules_weight_positive", sql`${t.spawnWeight} > 0`),
+  }),
+);
+
+/**
  * Which moves a creature knows. Upsert semantics on (creature, ability),
  * matching the `drops` / `map_biomes` junction pattern already in the repo.
  *

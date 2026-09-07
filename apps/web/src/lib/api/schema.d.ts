@@ -1040,6 +1040,170 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/creature-spawn-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List creature-spawn-rules */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    offset?: number | null;
+                    fields?: string;
+                    creatureCode?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CreatureSpawnRule"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Upsert creature-spawn-rules for one creature */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpsertCreatureSpawnRuleBody"];
+                };
+            };
+            responses: {
+                /** @description Upserted */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UpsertCreatureSpawnRuleResponse"];
+                    };
+                };
+                /** @description Validation failed or unknown code */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/creature-spawn-rules/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Batch upsert creature-spawn-rules */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BatchUpsertCreatureSpawnRulesBody"];
+                };
+            };
+            responses: {
+                /** @description Upserted */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BatchUpsertCreatureSpawnRulesResponse"];
+                    };
+                };
+                /** @description Validation failed or unknown code */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/creature-spawn-rules/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get by creature code */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    code: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The row */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CreatureSpawnRule"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/changelog": {
         parameters: {
             query?: never;
@@ -6496,6 +6660,7 @@ export interface components {
             code: string;
             name: string;
             predominantElements: string | null;
+            spawnChance: number;
             notes: string | null;
             /** Format: date-time */
             createdAt: string;
@@ -6507,6 +6672,11 @@ export interface components {
                 code: string;
                 name: string;
                 predominantElements?: string | null;
+                /**
+                 * @description Chance (0–1) de uma rolagem de spawn selvagem dar certo neste bioma. O jogo rola uma vez a cada trecho fixo que o jogador anda, então é este número que faz um bioma parecer fervilhante e outro deserto. 0 é bioma sem fauna — decisão legítima, não dado faltando. Decide só SE nasce algo; QUAL espécie é o spawnWeight de cada criatura. Omitido, fica no padrão do banco (0.15), que é chute de partida e existe para tunar.
+                 * @example 0.15
+                 */
+                spawnChance?: number;
                 notes?: string | null;
             }[];
             /**
@@ -6524,6 +6694,11 @@ export interface components {
             code?: string;
             name: string;
             predominantElements?: string | null;
+            /**
+             * @description Chance (0–1) de uma rolagem de spawn selvagem dar certo neste bioma. O jogo rola uma vez a cada trecho fixo que o jogador anda, então é este número que faz um bioma parecer fervilhante e outro deserto. 0 é bioma sem fauna — decisão legítima, não dado faltando. Decide só SE nasce algo; QUAL espécie é o spawnWeight de cada criatura. Omitido, fica no padrão do banco (0.15), que é chute de partida e existe para tunar.
+             * @example 0.15
+             */
+            spawnChance?: number;
             notes?: string | null;
             /**
              * @description Por que a mudança está sendo feita. Vai para o changelog.
@@ -6540,6 +6715,11 @@ export interface components {
             code?: string;
             name?: string;
             predominantElements?: string | null;
+            /**
+             * @description Chance (0–1) de uma rolagem de spawn selvagem dar certo neste bioma. O jogo rola uma vez a cada trecho fixo que o jogador anda, então é este número que faz um bioma parecer fervilhante e outro deserto. 0 é bioma sem fauna — decisão legítima, não dado faltando. Decide só SE nasce algo; QUAL espécie é o spawnWeight de cada criatura. Omitido, fica no padrão do banco (0.15), que é chute de partida e existe para tunar.
+             * @example 0.15
+             */
+            spawnChance?: number;
             notes?: string | null;
             /**
              * @description Por que a mudança está sendo feita. Vai para o changelog.
@@ -6623,6 +6803,66 @@ export interface components {
              * @example 0.5
              */
             awakenedMultiplier?: number;
+            notes?: string | null;
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        CreatureSpawnRule: {
+            id: number;
+            creatureId: number;
+            spawnWeight: number;
+            notes: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        BatchUpsertCreatureSpawnRulesResponse: {
+            codes: string[];
+            version: string;
+        };
+        BatchUpsertCreatureSpawnRulesBody: {
+            items: {
+                /** @example CRT-001 */
+                creatureCode: string;
+                /**
+                 * @description Peso RELATIVO no sorteio de spawn selvagem, dentro do pool do mapa da criatura. 2.0 é o dobro de um 1.0 do mesmo pool; os pesos não precisam somar nada. Precisa ser > 0 — espécie que não deve nascer no mundo fica sem mapa.
+                 * @example 1
+                 */
+                spawnWeight: number;
+                notes?: string | null;
+            }[];
+            /**
+             * @description Por que a mudança está sendo feita. Vai para o changelog.
+             * @example 6º elemento definido para expansão do Cenozoico
+             */
+            reason: string;
+            /**
+             * @description O que essa mudança afeta. Vai para o changelog.
+             * @example Habilita habilidades e criaturas de tipo Sombra
+             */
+            impact: string;
+        };
+        UpsertCreatureSpawnRuleResponse: {
+            code: string;
+            version: string;
+        };
+        UpsertCreatureSpawnRuleBody: {
+            /** @example CRT-001 */
+            creatureCode: string;
+            /**
+             * @description Peso RELATIVO no sorteio de spawn selvagem, dentro do pool do mapa da criatura. 2.0 é o dobro de um 1.0 do mesmo pool; os pesos não precisam somar nada. Precisa ser > 0 — espécie que não deve nascer no mundo fica sem mapa.
+             * @example 1
+             */
+            spawnWeight: number;
             notes?: string | null;
             /**
              * @description Por que a mudança está sendo feita. Vai para o changelog.

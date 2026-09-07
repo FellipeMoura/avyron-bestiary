@@ -7,6 +7,7 @@ export const BiomeSchema = z
     code: z.string().openapi({ example: "BIO-001" }),
     name: z.string(),
     predominantElements: z.string().nullable(),
+    spawnChance: z.number(),
     notes: z.string().nullable(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
@@ -14,7 +15,7 @@ export const BiomeSchema = z
   .openapi("Biome");
 
 export const BIOME_FIELDS = [
-  "id", "code", "name", "predominantElements", "notes", "createdAt", "updatedAt",
+  "id", "code", "name", "predominantElements", "spawnChance", "notes", "createdAt", "updatedAt",
 ] as const;
 
 export const ListBiomesQuerySchema = paginationSchema.extend({ fields: z.string().optional() });
@@ -24,6 +25,15 @@ const coreSchema = z.object({
   code: z.string().min(3).max(16),
   name: z.string().min(1).max(64),
   predominantElements: z.string().max(500).nullish(),
+  spawnChance: z.number().min(0).max(1).optional().openapi({
+    description:
+      "Chance (0–1) de uma rolagem de spawn selvagem dar certo neste bioma. O jogo rola uma " +
+      "vez a cada trecho fixo que o jogador anda, então é este número que faz um bioma parecer " +
+      "fervilhante e outro deserto. 0 é bioma sem fauna — decisão legítima, não dado faltando. " +
+      "Decide só SE nasce algo; QUAL espécie é o spawnWeight de cada criatura. Omitido, fica " +
+      "no padrão do banco (0.15), que é chute de partida e existe para tunar.",
+    example: 0.15,
+  }),
   notes: z.string().max(2000).nullish(),
 });
 

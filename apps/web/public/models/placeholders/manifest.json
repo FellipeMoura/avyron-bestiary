@@ -854,5 +854,121 @@
    "Walk"
   ],
   "height": 2.68
+ },
+ {
+  "group": "easyanimated",
+  "name": "Frog",
+  "url": "/models/placeholders/easyanimated/Frog.glb",
+  "clips": [
+   "Attack",
+   "Death",
+   "Idle",
+   "Jump"
+  ],
+  "height": 1.5
+ },
+ {
+  "group": "easyanimated",
+  "name": "Rat",
+  "url": "/models/placeholders/easyanimated/Rat.glb",
+  "clips": [
+   "Attack",
+   "Death",
+   "Idle",
+   "Jump",
+   "Run",
+   "Walk"
+  ],
+  "height": 0.91
+ },
+ {
+  "group": "easyanimated",
+  "name": "Snake",
+  "url": "/models/placeholders/easyanimated/Snake.glb",
+  "clips": [
+   "Attack",
+   "Idle",
+   "Jump",
+   "Walk"
+  ],
+  "height": 3.04
+ },
+ {
+  "group": "easyanimated",
+  "name": "Snake_angry",
+  "url": "/models/placeholders/easyanimated/Snake_angry.glb",
+  "clips": [
+   "Attack",
+   "Idle",
+   "Jump",
+   "Walk"
+  ],
+  "height": 3.05
+ },
+ {
+  "group": "easyanimated",
+  "name": "Spider",
+  "url": "/models/placeholders/easyanimated/Spider.glb",
+  "clips": [
+   "Attack",
+   "Death",
+   "Idle",
+   "Jump",
+   "Walk"
+  ],
+  "height": 1.95
+ },
+ {
+  "group": "easyanimated",
+  "name": "Wasp",
+  "url": "/models/placeholders/easyanimated/Wasp.glb",
+  "clips": [
+   "Attack",
+   "Death",
+   "Idle"
+  ],
+  "height": 3.78
+ },
+ {
+  "group": "dungeon",
+  "name": "Imp",
+  "url": "/models/placeholders/dungeon/Imp.glb",
+  "clips": [
+   "Idle",
+   "Walk",
+   "Run",
+   "Jump",
+   "Jump_Idle",
+   "Jump_Land",
+   "Attack",
+   "Attack2",
+   "HitReact",
+   "HitReact2",
+   "Death",
+   "Swim",
+   "Swim_Idle"
+  ],
+  "height": 1.68
+ },
+ {
+  "group": "dungeon",
+  "name": "Puglin",
+  "url": "/models/placeholders/dungeon/Puglin.glb",
+  "clips": [
+   "Idle",
+   "Walk",
+   "Run",
+   "Jump",
+   "Jump_Idle",
+   "Jump_Land",
+   "Attack",
+   "Attack2",
+   "HitReact",
+   "HitReact2",
+   "Death",
+   "Swim",
+   "Swim_Idle"
+  ],
+  "height": 0.93
  }
 ]

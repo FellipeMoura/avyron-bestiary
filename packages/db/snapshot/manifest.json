@@ -1,5 +1,5 @@
 {
-  "version": "0.447",
+  "version": "0.519",
   "tables": {
     "elements": 5,
     "creature_classes": 5,
@@ -8,7 +8,7 @@
     "glyphs": 2,
     "items": 22,
     "design_documents": 36,
-    "changelog": 447,
+    "changelog": 519,
     "elemental_advantages": 10,
     "map_biomes": 14,
     "map_connections": 2,
@@ -29,6 +29,7 @@
     "creature_stats": 60,
     "ability_stats": 27,
     "capture_rules": 60,
+    "creature_spawn_rules": 60,
     "creature_abilities": 325,
     "item_stats": 22,
     "combat_rules": 1,

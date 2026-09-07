@@ -1,4 +1,5 @@
 import { Link, useParams } from "react-router-dom";
+import { CardImage } from "../components/CardImage";
 import { CreatureViewer } from "../components/CreatureViewer";
 import { ModelLinkDialog } from "../components/ModelLinkDialog";
 import {
@@ -120,7 +121,7 @@ export function CreatureDetail() {
       </Link>
 
       {/* HERO — the single big visual moment on the site */}
-      <section className="grid grid-cols-[24px_1fr] items-start gap-6 md:gap-10">
+      <section className="grid grid-cols-[24px_1fr] items-start gap-6 md:grid-cols-[24px_1fr_auto] md:gap-10">
         <div className="fossil-scale h-full min-h-[160px] w-px justify-self-center opacity-70" />
         <div>
           <p className="font-mono text-micro uppercase tracking-widest text-graphite">
@@ -141,6 +142,10 @@ export function CreatureDetail() {
             <p className="mt-1 font-sans text-xs italic text-bone/60">{c.baseSpecies}</p>
           )}
         </div>
+        <CardImage
+          code={c.code}
+          className="hidden w-40 rounded-sm border border-graphite/40 object-cover md:block"
+        />
       </section>
 
       {/* 3D turntable — the only place camera rotation is allowed (see camera-e-perspectiva doc) */}

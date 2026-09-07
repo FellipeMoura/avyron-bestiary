@@ -347,7 +347,7 @@ cd ..\avyron
 
 ## Editar a paleta de um elemento
 
-A paleta é o que o jogo usa para **recolorir os corpos placeholder** por elemento e para acender a aura do Despertar Ancestral. Cinco campos em `elements`:
+**Desde 2026-09 o jogo não lê mais nenhum destes campos.** Até então a paleta recolorizava os corpos placeholder por elemento e dava cor à aura do Despertar Ancestral; as duas coisas saíram do repo Godot (`ElementPalette` não consulta mais `palette` nem `cardPalette` — ver `../avyron/CLAUDE.md`, "Não existe mais cor por elemento"). Os cinco campos e a tela `/elements` continuam existindo aqui — não foram removidos do bestiário, é decisão de conteúdo em aberto, não deste documento — mas editar a paleta hoje não muda nada visível no jogo. Cinco campos em `elements`:
 
 | campo | o que é |
 |---|---|
@@ -447,7 +447,7 @@ O export **aborta sem escrever nada** e lista o que falta se alguma criatura est
 | item não-mineral e não-material sem `value` | está à venda sem preço |
 | habilidade sem `ability_stats`, relic sem `relic_stats` | número que o jogo executa faltando |
 | NPC `merchant` sem `merchant_offers` | loja vazia é sempre erro de cadastro |
-| `modelUrl` fora de `/models/` ou apontando para arquivo inexistente | cápsula silenciosa no lugar do corpo |
+| `modelUrl` fora de `/models/` ou apontando para arquivo inexistente | placeholder único (`dungeon/Imp.glb`) silencioso no lugar do corpo — cápsula só se nem esse arquivo carregar, o que na prática não acontece |
 | elemento com paleta **pela metade** (alguma das três paradas faltando) | rampa incompleta não é rampa: o jogo teria de inventar a cor que falta |
 | parada de paleta que não seja `#RRGGBB` | a API valida na escrita, mas snapshot restaurado de outra máquina não passou por ela |
 | peça de `appearance` fora do manifest do kit de personagens | mesma política do `modelUrl` |

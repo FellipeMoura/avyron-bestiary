@@ -1,4 +1,4 @@
-import { check, integer, jsonb, pgTable, serial, text, unique } from "drizzle-orm/pg-core";
+import { check, integer, jsonb, pgTable, real, serial, text, unique } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { biomeRegionShapeEnum, eraEnum } from "./enums";
 import { glyphs } from "./glyphs";
@@ -34,15 +34,38 @@ export const gameMaps = pgTable("game_maps", {
   ...timestamps,
 });
 
-export const biomes = pgTable("biomes", {
-  id: serial("id").primaryKey(),
-  code: text("code").notNull().unique(),
-  name: text("name").notNull().unique(),
-  /** CSV of element names (e.g. "Água,Terra"). Promote to a table if it grows. */
-  predominantElements: text("predominant_elements"),
-  notes: text("notes"),
-  ...timestamps,
-});
+export const biomes = pgTable(
+  "biomes",
+  {
+    id: serial("id").primaryKey(),
+    code: text("code").notNull().unique(),
+    name: text("name").notNull().unique(),
+    /** CSV of element names (e.g. "Água,Terra"). Promote to a table if it grows. */
+    predominantElements: text("predominant_elements"),
+    /**
+     * Chance (0–1) that one wild-spawn roll succeeds while the player is in
+     * this biome. The game rolls once every fixed distance walked, so this is
+     * the knob that makes one biome feel teeming and another feel barren —
+     * a biome at 0 has no wild fauna at all, which is a legitimate design, not
+     * missing data.
+     *
+     * It decides only WHETHER something spawns. Which species it turns out to
+     * be is `creature_spawn_rules.spawnWeight`, per creature.
+     *
+     * The 0.15 default exists to backfill the rows that predate the column; it
+     * is a starting guess, and every biome is meant to be tuned off it.
+     */
+    spawnChance: real("spawn_chance").notNull().default(0.15),
+    notes: text("notes"),
+    ...timestamps,
+  },
+  (t) => ({
+    spawnChanceRange: check(
+      "biomes_spawn_chance_range",
+      sql`${t.spawnChance} >= 0 AND ${t.spawnChance} <= 1`,
+    ),
+  }),
+);
 
 /** Join table replacing biomes.mapas[] and game_maps.biome_progression. */
 export const mapBiomes = pgTable(

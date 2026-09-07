@@ -139,6 +139,58 @@ function coverageByBiome(
 }
 
 // ---------------------------------------------------------------------------
+// Aparição de criatura — a chance cadastrada, lida como ritmo
+// ---------------------------------------------------------------------------
+
+/**
+ * De quantos em quantos metros percorridos o jogo pergunta "nasce alguém?".
+ *
+ * Cópia deliberada de `CreatureSpawner.SPAWN_CHECK_INTERVAL_METERS`, do lado
+ * do Godot — a mesma licença que `containsPoint` toma no topo deste arquivo, e
+ * pela mesma razão: o valor da tela é mostrar o que o JOGO faz com o número
+ * cadastrado. `spawnChance = 0,40` sozinho não diz nada sobre ritmo; com o
+ * intervalo vira "uma a cada ~13 m", que é a leitura de que quem tuna precisa.
+ *
+ * O risco da cópia é conhecido e aceito: mudar o intervalo no GDScript faz a
+ * DISTÂNCIA daqui mentir até esta linha acompanhar. A chance em si — que é o
+ * dado — nunca mente, porque vem da API; por isso ela é exibida primeiro e a
+ * distância entra como leitura secundária, não como o número.
+ */
+const SPAWN_CHECK_INTERVAL_METERS = 5;
+
+/**
+ * A taxa de aparição de um bioma, com a distância média que ela produz.
+ *
+ * Zero **não** é pintado como problema (`text-ember` é reservado para dado
+ * faltando ou partição quebrada). Um bioma sem fauna é decisão de design — a
+ * Costa Primordial do PZ-01 é o adro dos NPCs e tem 0,00 de propósito —, e
+ * marcá-lo em vermelho ensinaria a corrigir o que está certo.
+ */
+function SpawnRate({ chance }: { chance: number | undefined }) {
+  if (chance == null) {
+    return <span className="text-ember">aparição não cadastrada</span>;
+  }
+  if (chance <= 0) {
+    return (
+      <span title="Chance zero é design, não dado faltando: o bioma pode ser adro de NPC, como a Costa Primordial, ou hostil demais para ter fauna.">
+        sem fauna selvagem
+      </span>
+    );
+  }
+  return (
+    <span>
+      {/* Casa decimal só abaixo de 1%, onde o inteiro arredondaria para zero e
+          diria "sem fauna" sobre um bioma que tem. Acima disso as chances são
+          percentuais redondos e o ",0" só polui. */}
+      aparição {formatNumber(chance * 100, chance < 0.01 ? 1 : 0)}%
+      <span className="text-bone/70">
+        {" · "}1 a cada ~{formatNumber(SPAWN_CHECK_INTERVAL_METERS / chance, 0)} m
+      </span>
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Cor do bioma — derivada, nunca cadastrada
 // ---------------------------------------------------------------------------
 
@@ -280,6 +332,15 @@ export function Maps() {
           quadrado unitário [−1, 1]; quem multiplica pelo meio-lado em metros é o Godot.
         </p>
       </header>
+
+      <div className="flex justify-end">
+        <Link
+          to="/maps/prototype-checklist"
+          className="rounded border border-graphite/40 bg-slate/5 px-4 py-2 font-mono text-micro uppercase tracking-[0.18em] text-bone transition-colors hover:border-bone/40 hover:text-bone"
+        >
+          checklist do protótipo PZ-01
+        </Link>
+      </div>
 
       <ChainOverview
         maps={orderedMaps}
@@ -820,6 +881,11 @@ function BiomeTraversal({
                     </span>
                   )}
                 </p>
+                {/* Linha própria, e não mais um item na de cima: chão e minério
+                    descrevem o TERRENO, aparição descreve quem vive nele. */}
+                <p className="mt-0.5 font-mono text-micro text-graphite">
+                  <SpawnRate chance={biome?.spawnChance} />
+                </p>
               </div>
             </li>
           );
@@ -830,6 +896,12 @@ function BiomeTraversal({
           </li>
         )}
       </ul>
+      <p className="mt-3 max-w-prose font-mono text-micro leading-relaxed text-graphite">
+        <span className="text-bone">Aparição</span> é a chance de uma rolagem virar criatura
+        selvagem, e o jogo rola uma a cada {SPAWN_CHECK_INTERVAL_METERS} m que o jogador percorre —
+        daí a distância média ao lado. Ela decide só <em>se</em> nasce algo; <em>quem</em> nasce é
+        sorteio ponderado pelo peso de cada espécie.
+      </p>
     </div>
   );
 }

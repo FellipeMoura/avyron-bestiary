@@ -21,9 +21,18 @@
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import sharp from "sharp";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, "..");
+
+/**
+ * Cards de criatura (`apps/web/public/crt-cards/CRT-XXX.png`) — ver o
+ * comentário junto de `mirrorDir(CARDS_DIR, ...)` mais abaixo sobre o
+ * espelhamento em si. Definido aqui, cedo, porque `outCreatures` também
+ * precisa (para `cardPalette`, logo abaixo).
+ */
+const CARDS_DIR = resolve(REPO_ROOT, "apps/web/public/crt-cards");
 
 // ---------------------------------------------------------------------------
 // args
@@ -134,6 +143,7 @@ const [
   abilityStats,
   creatureStats,
   captureRules,
+  creatureSpawnRules,
   creatureAbilities,
   maps,
   biomes,
@@ -169,6 +179,7 @@ const [
   get(`/ability-stats?${LIMIT}`),
   get(`/creature-stats?${LIMIT}`),
   get(`/capture-rules?${LIMIT}`),
+  get(`/creature-spawn-rules?${LIMIT}`),
   get(`/creature-abilities?${LIMIT}`),
   get(`/maps?${LIMIT}`),
   get(`/biomes?${LIMIT}`),
@@ -297,6 +308,7 @@ function buildAppearance(npc) {
 const statsByCreature = byId([]);
 for (const s of creatureStats) statsByCreature.set(s.creatureId, s);
 const captureByCreature = new Map(captureRules.map((c) => [c.creatureId, c]));
+const spawnByCreature = new Map(creatureSpawnRules.map((s) => [s.creatureId, s]));
 const awakeningByCreature = new Map(awakenings.map((a) => [a.creatureId, a]));
 const abilityStatByAbility = new Map(abilityStats.map((s) => [s.abilityId, s]));
 
@@ -711,14 +723,119 @@ const outAbilities = abilities.map((a) => {
   };
 });
 
-const outCreatures = creatures.map((c) => {
+/**
+ * Paleta extraída do card, no MESMO formato shadow/mid/highlight que a
+ * paleta de elemento já usa (ver o comentário grande logo abaixo de
+ * `outCreatures`) — é o que deixa `ElementPalette` no jogo ler as duas fontes
+ * pela mesma função, sem shader novo. `aura`/`spread` ficam de fora de
+ * propósito: sem eles, o jogo cai nos MESMOS fallbacks que já usa pra
+ * elemento sem essas chaves (`aura` vira `highlight`, `spread` vira 0 — uma
+ * criatura com card não tem "família" pra se afastar).
+ *
+ * Deriva do PNG, não se guarda (regra da "quarta casa" — ver seção "Onde
+ * cada informação mora"): computado aqui, a cada export, nunca uma coluna no
+ * Postgres. Determinístico de propósito — sem isso, dois exports do MESMO
+ * card sairiam com dataVersion igual e bundle diferente, e ninguém saberia
+ * por quê.
+ */
+async function extractCardPalette(pngPath) {
+  const { data, info } = await sharp(pngPath)
+    .resize(48, 48, { fit: "inside" })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const pixels = [];
+  for (let i = 0; i + 3 < data.length; i += info.channels) {
+    if (data[i + 3] < 128) continue; // pixel de fundo (transparente) — fora
+    pixels.push([data[i], data[i + 1], data[i + 2]]);
+  }
+  if (pixels.length < 8) return null; // card vazio ou quase todo transparente
+
+  const clusters = kMeansRgb(pixels, 3);
+  clusters.sort((a, b) => luminance(a) - luminance(b));
+  const [shadow, mid, highlight] = clusters;
+  return { shadow: toHex(shadow), mid: toHex(mid), highlight: toHex(highlight) };
+}
+
+function luminance([r, g, b]) {
+  // Mesmos pesos de `element_palette.gdshader` — a mesma definição de
+  // "claro" e "escuro" nos dois lados da ponte.
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function toHex([r, g, b]) {
+  const c = (n) => Math.round(Math.max(0, Math.min(255, n))).toString(16).padStart(2, "0");
+  return `#${c(r)}${c(g)}${c(b)}`;
+}
+
+/**
+ * k-means sobre RGB — poucos pontos (48×48 no máximo) e poucas iterações,
+ * converge rápido. Semente DETERMINÍSTICA (pontos espaçados uniformemente na
+ * lista, não sorteados): o mesmo card tem que sair com a mesma paleta em
+ * toda rodada de export, senão o bundle muda sem o catálogo ter mudado.
+ */
+function kMeansRgb(points, k, iterations = 10) {
+  let centroids = Array.from(
+    { length: k },
+    (_, i) => points[Math.floor((i + 0.5) * points.length / k)],
+  );
+  let assignments = new Array(points.length).fill(-1);
+
+  for (let iter = 0; iter < iterations; iter++) {
+    let changed = false;
+    for (let i = 0; i < points.length; i++) {
+      let best = 0;
+      let bestDist = Infinity;
+      for (let c = 0; c < k; c++) {
+        const [cr, cg, cb] = centroids[c];
+        const [pr, pg, pb] = points[i];
+        const d = (pr - cr) ** 2 + (pg - cg) ** 2 + (pb - cb) ** 2;
+        if (d < bestDist) {
+          bestDist = d;
+          best = c;
+        }
+      }
+      if (assignments[i] !== best) {
+        assignments[i] = best;
+        changed = true;
+      }
+    }
+
+    const sums = Array.from({ length: k }, () => [0, 0, 0, 0]);
+    for (let i = 0; i < points.length; i++) {
+      const sum = sums[assignments[i]];
+      sum[0] += points[i][0];
+      sum[1] += points[i][1];
+      sum[2] += points[i][2];
+      sum[3] += 1;
+    }
+    centroids = sums.map((sum, idx) => (sum[3] > 0 ? [sum[0] / sum[3], sum[1] / sum[3], sum[2] / sum[3]] : centroids[idx]));
+
+    if (!changed) break;
+  }
+  return centroids;
+}
+
+const outCreatures = await Promise.all(creatures.map(async (c) => {
   const s = statsByCreature.get(c.id);
   const cap = captureByCreature.get(c.id);
+  const spawn = spawnByCreature.get(c.id);
   const awk = awakeningByCreature.get(c.id);
   const moves = (movesByCreature.get(c.id) ?? []).sort((a, b) => a.sortOrder - b.sortOrder);
 
   if (!s) problems.push(`creature ${c.code} (${c.originalName}) has no creature_stats row`);
   if (!cap) problems.push(`creature ${c.code} (${c.originalName}) has no capture_rules row`);
+  // Só cobrado de quem está num mapa: é `creatures.mapId` que monta o pool de
+  // spawn selvagem, então criatura sem mapa nunca é sorteada e não precisa de
+  // peso. Quem ESTÁ num mapa precisa — sem o número, o sorteio ponderado do
+  // lado do jogo teria que inventar um default, e inventar número de tuning em
+  // GDScript é exatamente o que a Regra 1 proíbe. Por isso aborta, não avisa.
+  if (c.mapId != null && !spawn) {
+    problems.push(
+      `creature ${c.code} (${c.originalName}) is on a map but has no creature_spawn_rules row`,
+    );
+  }
   if (moves.length === 0) problems.push(`creature ${c.code} (${c.originalName}) knows no abilities`);
 
   // Golpe de assinatura sem Despertar é um golpe que o jogador vê na ficha e
@@ -750,6 +867,9 @@ const outCreatures = creatures.map((c) => {
     );
   }
 
+  const cardPath = join(CARDS_DIR, `${c.code}.png`);
+  const cardPalette = existsSync(cardPath) ? await extractCardPalette(cardPath) : null;
+
   return {
     code: c.code,
     name: c.originalName,
@@ -757,8 +877,15 @@ const outCreatures = creatures.map((c) => {
     class: code(classById, c.classId),
     element: code(elementById, c.elementId),
     map: code(mapById, c.mapId),
+    /**
+     * Peso RELATIVO no sorteio de spawn selvagem, dentro do pool do mapa acima.
+     * `null` só para criatura sem mapa — quem está num mapa sempre tem número
+     * (o export aborta sem ele), então o jogo nunca precisa de default.
+     */
+    spawnWeight: spawn ? spawn.spawnWeight : null,
     silhouetteNote: c.silhouetteNote,
     modelUrl: c.modelUrl,
+    cardPalette,
     stats: s
       ? {
           hp: s.baseHp,
@@ -811,7 +938,7 @@ const outCreatures = creatures.map((c) => {
         }
       : null,
   };
-});
+}));
 
 /**
  * Paleta do elemento: rampa de três paradas lida por LUMINÂNCIA no jogo, mais
@@ -1090,6 +1217,13 @@ const bundle = {
     code: b.code,
     name: b.name,
     predominantElements: b.predominantElements,
+    /**
+     * Chance (0–1) de uma rolagem de spawn selvagem dar certo enquanto o
+     * jogador atravessa este bioma. Decide SE nasce algo; qual espécie é o
+     * `spawnWeight` de cada criatura. Coluna `NOT NULL` no banco, então não há
+     * caso de ausência a tratar aqui.
+     */
+    spawnChance: b.spawnChance,
   })),
   /**
    * Os Glifos existentes. O jogo compara por `code` (é o que o save guarda) e
@@ -1277,6 +1411,18 @@ const BIOMES_DIR = resolve(WEB_MODELS_DIR, "biomes");
  */
 const CHARACTERS_DIR = resolve(WEB_MODELS_DIR, "characters");
 
+/**
+ * Cards de criatura seguem o mesmo contrato de bioma/personagem: espelhados
+ * por diretório inteiro (aqui embaixo, em `mirrorDir`). Nenhuma criatura
+ * referencia o próprio ARQUIVO de card por URL no bundle — quem casa arte
+ * com criatura nisso é o código no nome do arquivo, resolvido em runtime
+ * tanto pelo site (`CardImage`) quanto pelo jogo (`res://cards/<code>.png`).
+ * `cardPalette` (ver `outCreatures` acima) é a exceção: não é o arquivo, é
+ * uma leitura DERIVADA dele, pequena o bastante pra viajar no bundle como
+ * qualquer outro campo computado. Cobertura é parcial de propósito: arte
+ * chega uma criatura de cada vez, e o consumidor dos dois lados (mirror e
+ * paleta) trata ausência como estado normal, não como erro.
+ */
 function mirrorDir(srcDir, destDir) {
   let copies = 0;
   for (const entry of readdirSync(srcDir, { withFileTypes: true })) {
@@ -1326,6 +1472,7 @@ const biomeCopies = existsSync(BIOMES_DIR)
 const characterCopies = existsSync(CHARACTERS_DIR)
   ? mirrorDir(CHARACTERS_DIR, resolve(OUT_REPO, "models/characters"))
   : 0;
+const cardCopies = existsSync(CARDS_DIR) ? mirrorDir(CARDS_DIR, resolve(OUT_REPO, "cards")) : 0;
 
 const kb = (Buffer.byteLength(JSON.stringify(bundle)) / 1024).toFixed(1);
 console.log(`dataVersion: ${bundle.dataVersion}`);
@@ -1333,6 +1480,7 @@ console.log(`written:     ${OUT_FILE} (${kb} KB)`);
 console.log(`models:      ${modelCopies.length} .glb mirrored to ${resolve(OUT_REPO, "models")}`);
 console.log(`biomes:      ${biomeCopies} files mirrored to ${resolve(OUT_REPO, "models/biomes")}`);
 console.log(`characters:  ${characterCopies} files mirrored to ${resolve(OUT_REPO, "models/characters")}`);
+console.log(`cards:       ${cardCopies} files mirrored to ${resolve(OUT_REPO, "cards")}`);
 console.log(
   `contents:    ${bundle.creatures.length} creatures, ${bundle.abilities.length} abilities, ` +
     `${bundle.elementalAdvantages.length} elemental pairs, ${bundle.classes.length} classes, ` +

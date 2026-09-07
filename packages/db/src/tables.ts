@@ -48,6 +48,7 @@ export const TABLES: readonly string[] = [
   "creature_stats",
   "ability_stats",
   "capture_rules",
+  "creature_spawn_rules",
   "creature_abilities",
   "item_stats",
   "combat_rules",

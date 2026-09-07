@@ -13,6 +13,7 @@ import { abilityStatsRouter } from "./modules/abilityStats/AbilityStatsRoutes.js
 import { awakeningsRouter } from "./modules/awakenings/AwakeningsRoutes.js";
 import { biomesRouter } from "./modules/biomes/BiomesRoutes.js";
 import { captureRulesRouter } from "./modules/captureRules/CaptureRulesRoutes.js";
+import { creatureSpawnRulesRouter } from "./modules/creatureSpawnRules/CreatureSpawnRulesRoutes.js";
 import { changelogRouter } from "./modules/changelog/ChangelogRoutes.js";
 import { combatRulesRouter } from "./modules/combatRules/CombatRulesRoutes.js";
 import { contextRouter } from "./modules/context/ContextRoutes.js";
@@ -104,6 +105,7 @@ export function createApp() {
   v1.use("/creature-stats", creatureStatsRouter);
   v1.use("/ability-stats", abilityStatsRouter);
   v1.use("/capture-rules", captureRulesRouter);
+  v1.use("/creature-spawn-rules", creatureSpawnRulesRouter);
   v1.use("/creature-abilities", creatureAbilitiesRouter);
   v1.use("/items", itemsRouter);
   v1.use("/item-stats", itemStatsRouter);

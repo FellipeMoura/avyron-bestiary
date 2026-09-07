@@ -24,6 +24,8 @@ const GROUP_LABEL: Record<string, string> = {
   big: "terrestres",
   flying: "voadores",
   quadruped: "quadrúpedes",
+  dungeon: "dungeon monsters (retarget)",
+  easyanimated: "pequenos animais (rã, aranha, rato, cobra, vespa)",
 };
 
 interface ModelLinkDialogProps {

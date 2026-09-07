@@ -1,18 +1,28 @@
-import { readdirSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
-import { resolve, dirname, join, basename } from "node:path";
+import { readdirSync, mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
+import { resolve, dirname, join, basename, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { NodeIO, getBounds } from "@gltf-transform/core";
 import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 
 /**
- * Convert placeholder .gltf packs (Quaternius, CC0) into servable .glb files
- * with animation clip names normalized to a single vocabulary.
+ * Convert placeholder packs (Quaternius, CC0) into servable .glb files
+ * with animation clip names normalized to a single vocabulary. Source is
+ * `.gltf` for packs that ship it directly, or `.glb` for packs that don't
+ * (EasyAnimated/ — the pack only ships .fbx/.obj/.blend, converted to .glb
+ * by Godot beforehand, since no Node lib here reads .fbx; see
+ * `avyron/scripts/dev/convert_easy_pack.gd`). gltf-transform reads both
+ * identically, so the rest of this script doesn't care which one a given
+ * file is.
  *
- * The three packs speak different animation dialects — the ground monsters say
+ * The packs speak different animation dialects — the ground monsters say
  * `Punch`/`Run`, the flyers say `Flying_Idle`/`Fast_Flying`, the quadrupeds say
  * `Attack_Kick`/`Gallop` (and disagree on `Jump_toIdle` vs `Jump_ToIdle`
- * between themselves). Normalizing here means the game and the viewer address
- * every model by the same clip names and never learn the packs existed.
+ * between themselves), EasyAnimated says `Rat_Run`/`Wasp_Flying` — already
+ * renamed to canonical names by the FBX→glb conversion step, so `CLIP_MAP`
+ * below has nothing left to do for that group and every clip passes through
+ * unmapped-but-already-correct. Normalizing here means the game and the
+ * viewer address every model by the same clip names and never learn the
+ * packs existed.
  *
  * Output: apps/web/public/models/placeholders/<group>/<Name>.glb, plus a
  * manifest.json alongside listing every model (url, clips, height) — the
@@ -103,7 +113,14 @@ const manifest = [];
 for (const group of groups) {
   const srcDir = join(SOURCE_DIR, group, "glTF");
   const outGroupDir = join(OUT_DIR, group.toLowerCase());
-  const files = readdirSync(srcDir).filter((f) => f.toLowerCase().endsWith(".gltf")).sort();
+  // .glb entra pelo mesmo caminho que .gltf — gltf-transform lê os dois
+  // igual. É o formato de saída de fontes que não chegam em .gltf pronto
+  // (ver EasyAnimated/, convertido de .fbx pelo Godot em
+  // `avyron/scripts/dev/convert_easy_pack.gd`, porque nenhuma lib Node do
+  // bestiário lê .fbx).
+  const files = readdirSync(srcDir)
+    .filter((f) => [".gltf", ".glb"].includes(f.toLowerCase().slice(f.lastIndexOf("."))))
+    .sort();
 
   console.log(`\n${group}/ → placeholders/${group.toLowerCase()}/`);
 
@@ -157,13 +174,13 @@ for (const group of groups) {
     const bounds = scene ? getBounds(scene) : null;
     const height = bounds ? (bounds.max[1] - bounds.min[1]).toFixed(2) : "?";
 
-    const outPath = join(outGroupDir, `${basename(file, ".gltf")}.glb`);
+    const name = basename(file, extname(file));
+    const outPath = join(outGroupDir, `${name}.glb`);
     if (!DRY) {
       mkdirSync(outGroupDir, { recursive: true });
       await io.write(outPath, doc);
     }
 
-    const name = basename(file, ".gltf");
     manifest.push({
       group: group.toLowerCase(),
       name,
@@ -181,10 +198,27 @@ for (const group of groups) {
   }
 }
 
+/**
+ * MESCLA no manifest existente — substitui só as entradas dos GRUPOS que esta
+ * rodada realmente escaneou, preserva o resto intocado. Escrever por cima
+ * incondicionalmente destruiria os grupos cujo `placeholder_models/<Group>/`
+ * não existe NESTA máquina: a pasta fonte é local-only (cada dev traz a
+ * própria cópia, nunca commitada), então rodar com só ALGUNS grupos presentes
+ * — o caso comum, não a exceção — apagaria o manifest inteiro e deixaria só
+ * o que essa máquina por acaso tinha. Foi exatamente o que aconteceu na
+ * prática: rodar com só `EasyAnimated/` presente reduziu 44 entradas
+ * (big/flying/quadruped, geradas em outra hora/máquina) para 6.
+ */
 if (!DRY && manifest.length > 0) {
+  const scannedGroups = new Set(groups.map((g) => g.toLowerCase()));
+  let existing = [];
+  if (existsSync(join(OUT_DIR, "manifest.json"))) {
+    existing = JSON.parse(readFileSync(join(OUT_DIR, "manifest.json"), "utf8"));
+  }
+  const merged = existing.filter((m) => !scannedGroups.has(m.group)).concat(manifest);
   mkdirSync(OUT_DIR, { recursive: true });
-  writeFileSync(join(OUT_DIR, "manifest.json"), JSON.stringify(manifest, null, 1));
-  console.log(`\nmanifest.json: ${manifest.length} models`);
+  writeFileSync(join(OUT_DIR, "manifest.json"), JSON.stringify(merged, null, 1));
+  console.log(`\nmanifest.json: ${manifest.length} models nesta rodada, ${merged.length} no total`);
 }
 
 console.log(`\ndone: ${converted} converted, ${skipped} skipped, ${failed} failed`);

@@ -4,7 +4,9 @@ Como preparar um `.glb` do Meshy antes de servir no bestiário, e por que o proc
 
 **Resumo operacional:** jogue o arquivo em `apps/web/public/models/` e rode `pnpm models:optimize`. O script é idempotente — pula o que já está otimizado e processa só o novo. O resto deste documento explica as decisões, para que ninguém as desfaça por engano.
 
-> **Placeholders não passam por aqui.** Os modelos em `apps/web/public/models/placeholders/` (packs CC0 do Quaternius, animados) são gerados por `pnpm models:placeholders` a partir de `placeholder_models/`, que converte glTF → `.glb`, normaliza os nomes dos clipes de animação para o vocabulário único e emite o `manifest.json` do seletor da ficha. KTX2 não compraria nada neles: a textura é um atlas de paleta de 9 KB (ou nenhuma). O `models:optimize` só varre a raiz de `models/`, então os dois pipelines não se tocam. Este documento segue valendo para os `.glb` do Meshy — que hoje estão fora do projeto por não terem animação, mas voltam por este mesmo caminho quando forem animados.
+> **`--dir <pasta>` trata um `.glb` que não é de criatura.** O corpo do jogador (`../avyron/models/player.glb`) sai do mesmo Meshy, com as mesmas texturas 2048², e é o único corpo SEMPRE em cena — precisa de KTX2 tanto quanto qualquer criatura. Mas não é conteúdo de catálogo: copiá-lo para `apps/web/public/models/` só para poder otimizá-lo deixaria um `.glb` sem `modelUrl` nenhum apontando pra ele numa pasta cujo contrato inteiro é `<CODE>.glb` 1:1 com criatura. `node scripts/optimize-models.mjs --dir ../avyron/models` aplica o mesmo tratamento onde o arquivo mora; os `.glb` de criatura espelhados ao lado dele já saem daqui em KTX2 e caem no `SKIP  already KTX2`.
+
+> **Placeholders não passam por aqui.** Os modelos em `apps/web/public/models/placeholders/` (packs CC0 do Quaternius, animados) são gerados por `pnpm models:placeholders` a partir de `placeholder_models/`, que converte glTF → `.glb`, normaliza os nomes dos clipes de animação para o vocabulário único e emite o `manifest.json` do seletor da ficha. KTX2 não compraria nada neles: a textura é um atlas de paleta de 9 KB (ou nenhuma). O `models:optimize` só varre a raiz de `models/`, então os dois pipelines não se tocam. Este documento vale integralmente para os `.glb` animados do Meshy AI — desde 2026-09 eles voltaram por este mesmo caminho: `scripts/convert-meshy.mjs` normaliza os clipes e escreve `<CODE>.glb` na raiz de `models/`, e o checklist abaixo (passo 2) é o mesmo, só que o nome do arquivo já sai pronto do conversor em vez de ser escolhido à mão.
 
 ---
 
@@ -147,8 +149,8 @@ O wiring vive em [`apps/web/src/components/CreatureViewer.tsx`](../apps/web/src/
 
 ## Checklist para um modelo novo
 
-1. Exportar do Meshy com "gerar mapas PBR" ligado, textura 2048².
-2. Salvar como `CRT-XXX.glb` (sem sufixo de versão) em `apps/web/public/models/`.
+1. Exportar do Meshy com "gerar mapas PBR" ligado, textura 2048². **Animado:** baixe no formato de `.glb` único (malha + esqueleto + todos os clipes) — é a opção preferida; export multi-arquivo (um `.glb` por clipe) também funciona, mas é o caminho legado, mais lento e mais propenso a erro na hora de remover um clipe.
+2. **Estático:** salve como `CRT-XXX.glb` (sem sufixo de versão) direto em `apps/web/public/models/`. **Animado:** rode `pnpm models:meshy -- --source <arquivo ou pasta> --out apps/web/public/models/CRT-XXX.glb` primeiro — ele normaliza os nomes dos clipes pro vocabulário canônico (`Idle`/`Walk`/`Run`/`Attack`/`Attack2`/`Attack3`/`HitReact`/`Death`/`Swim`/`Swim_Idle`/`Dodge`) e já escreve no lugar certo.
 3. `pnpm models:optimize`
 4. Conferir a saída: geometria inalterada, redução de ~45–50% no arquivo.
 5. `pnpm build` — `dist/` é saída de build e não se atualiza sozinho; sem rebuild, `vite preview` continua servindo o arquivo antigo.

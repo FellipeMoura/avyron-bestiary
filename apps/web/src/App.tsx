@@ -8,6 +8,7 @@ import { Elements } from "./routes/Elements";
 import { Home } from "./routes/Home";
 import { Equipment } from "./routes/Equipment";
 import { Items } from "./routes/Items";
+import { MapPrototypeChecklist } from "./routes/MapPrototypeChecklist";
 import { Maps } from "./routes/Maps";
 
 export function App() {
@@ -21,6 +22,7 @@ export function App() {
           <Route path="/items" element={<Items />} />
           <Route path="/equipment" element={<Equipment />} />
           <Route path="/maps" element={<Maps />} />
+          <Route path="/maps/prototype-checklist" element={<MapPrototypeChecklist />} />
           <Route path="/elements" element={<Elements />} />
           <Route path="/documents" element={<DocumentsList />} />
           <Route path="/documents/:slug" element={<DocumentDetail />} />

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { CardImage } from "../components/CardImage";
 import { CodeIcon } from "../components/CodeIcon";
 import { Filter } from "../components/Filter";
 import {
@@ -196,8 +197,18 @@ export function Bestiary() {
             <li key={c.code}>
               <Link
                 to={`/bestiary/${c.code}`}
-                className="grid grid-cols-[110px_1fr] items-baseline gap-6 py-4 transition-colors hover:bg-slate/50 md:grid-cols-[110px_1.2fr_1fr_1fr_1fr]"
+                className="grid grid-cols-[40px_110px_1fr] items-center gap-6 py-4 transition-colors hover:bg-slate/50 md:grid-cols-[40px_110px_1.2fr_1fr_1fr_1fr]"
               >
+                {/* Div sempre presente: `CardImage` some quando o arquivo não
+                    existe, e um filho de grid que desaparece desloca todos os
+                    outros para a coluna anterior — o wrapper é o que mantém a
+                    coluna reservada mesmo sem imagem dentro dela. */}
+                <div className="h-10 w-10 shrink-0">
+                  <CardImage
+                    code={c.code}
+                    className="h-10 w-10 rounded-sm border border-graphite/40 object-cover"
+                  />
+                </div>
                 <span className="inline-flex items-center gap-1.5 font-mono text-xs text-ember">
                   {c.code}
                   {c.modelUrl && (

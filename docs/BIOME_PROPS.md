@@ -100,7 +100,7 @@ O kit aquático atual é `.glb` porque as 11 peças vieram do Meshy com texturas
 
 **Triângulos.** Scatter: **150–600**. Landmark: **1.000–3.000**. Hero: até 5.000. São mais apertados que os tiers de criatura de `direcao-3d-arte`, e a razão é multiplicidade — uma criatura aparece uma vez na tela, uma peça de scatter aparece sessenta.
 
-**Paleta.** O prop **não** é recolorido em runtime: `ElementPalette` só entra em `res://models/placeholders/`, e é assim de propósito. A cor vem assada no arquivo, e deve seguir a banda dominante do bioma em `identidade-visual` — azuis-abissais para Água, marrons e arenito para Terra, musgos para Natureza.
+**Paleta.** O prop **não** é recolorido em runtime — nenhum corpo é: a recoloração por elemento do `ElementPalette` (que só entrava em corpo de criatura placeholder, nunca em cenário) foi removida do jogo em 2026-09 (ver `../avyron/CLAUDE.md`). A cor do prop sempre veio assada no arquivo, e deve seguir a banda dominante do bioma em `identidade-visual` — azuis-abissais para Água, marrons e arenito para Terra, musgos para Natureza.
 
 **Destino.** `apps/web/public/models/biomes/<kit>/`, espelhado para o repo do jogo por `pnpm game:export` (diretório inteiro, ao contrário dos modelos de criatura, que são dirigidos por `modelUrl`). Um kit por bioma mantém o atlas compartilhado coerente: `glacial/`, `abyssal/`, `shallow/`, `shore/`.
 

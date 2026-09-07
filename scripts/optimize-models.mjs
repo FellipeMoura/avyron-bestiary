@@ -25,11 +25,30 @@ import { encodeToKTX2 } from "ktx2-encoder";
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..");
 
-const MODELS_DIR = resolve(repoRoot, "apps/web/public/models");
-const BACKUP_DIR = resolve(repoRoot, "apps/web/.model-backups");
-
 const DRY = process.argv.includes("--dry");
 const FORCE = process.argv.includes("--force");
+
+/**
+ * `--dir <pasta>` roda o mesmo tratamento numa pasta que não a de criaturas.
+ *
+ * Existe por causa do corpo do JOGADOR (`avyron/models/player.glb`): ele sai do
+ * Meshy com as mesmas texturas 2048² de sempre — ~89 MB de VRAM sem KTX2, e
+ * este é o único corpo que está SEMPRE em cena —, mas não é conteúdo de
+ * catálogo. Copiá-lo para `apps/web/public/models/` só para poder otimizá-lo
+ * deixaria um `.glb` sem `modelUrl` nenhum apontando pra ele numa pasta cujo
+ * contrato inteiro é `<CODE>.glb` 1:1 com criatura. O tratamento é o mesmo; só
+ * o endereço muda.
+ *
+ * A varredura não é recursiva, então apontar para `avyron/models/` pega o corpo
+ * do jogador e os `.glb` de criatura espelhados ao lado dele — que já saem
+ * daqui em KTX2 e caem no `SKIP  already KTX2`, exatamente como a
+ * idempotência do script promete.
+ */
+const dirFlag = process.argv.indexOf("--dir");
+const MODELS_DIR = dirFlag === -1
+  ? resolve(repoRoot, "apps/web/public/models")
+  : resolve(repoRoot, process.argv[dirFlag + 1] ?? "");
+const BACKUP_DIR = resolve(repoRoot, "apps/web/.model-backups");
 
 // An emissive map peaking at or below this is black: JPEG noise over a blank
 // image, contributing nothing but VRAM. Measured across the first 9 creatures,
