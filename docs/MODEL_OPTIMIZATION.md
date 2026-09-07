@@ -18,7 +18,7 @@ Um modelo do Meshy sai com ~8 MB, dos quais **~98% é textura e ~2% é geometria
 
 | | Geometria | Texturas | Total |
 |---|---|---|---|
-| CRT-009 | 0.20 MB | 8.73 MB | 8.93 MB |
+| CRT-009 (Meganeura, hoje CRT-069) | 0.20 MB | 8.73 MB | 8.93 MB |
 | CRT-001 | 0.19 MB | 7.23 MB | 7.42 MB |
 
 Duas consequências que contrariam a intuição:
@@ -61,7 +61,7 @@ O script usa **ETC1S** como padrão e **UASTC** só no normal map.
 
 Normal map é a exceção porque ETC1S o degrada de forma visível — blocagem e banding em superfícies lisas. Como o normal é justamente o que dá detalhe de superfície a criaturas de 3k tris, ele não pode ser o mapa sacrificado.
 
-Três configurações foram medidas no CRT-009 antes da escolha:
+Três configurações foram medidas no CRT-009 (Meganeura, hoje CRT-069) antes da escolha:
 
 | Configuração | Arquivo | VRAM | Normal |
 |---|---|---|---|

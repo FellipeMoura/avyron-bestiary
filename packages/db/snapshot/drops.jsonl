@@ -6,15 +6,9 @@
 {"id":20,"creature_id":21,"item_id":20,"chance":0.85,"condition":"Derrota em combate","created_at":"2026-08-10T11:10:13.979Z","updated_at":"2026-08-10T11:10:13.979Z"}
 {"id":23,"creature_id":24,"item_id":21,"chance":0.85,"condition":"Derrota em combate","created_at":"2026-08-10T11:10:13.979Z","updated_at":"2026-08-10T11:10:13.979Z"}
 {"id":24,"creature_id":25,"item_id":21,"chance":0.85,"condition":"Derrota em combate","created_at":"2026-08-10T11:10:13.979Z","updated_at":"2026-08-10T11:10:13.979Z"}
-{"id":41,"creature_id":34,"item_id":19,"chance":0.85,"condition":"Derrota em combate","created_at":"2026-08-27T21:19:14.458Z","updated_at":"2026-08-27T21:19:14.458Z"}
 {"id":42,"creature_id":35,"item_id":21,"chance":0.85,"condition":"Derrota em combate","created_at":"2026-08-27T21:19:14.458Z","updated_at":"2026-08-27T21:19:14.458Z"}
 {"id":43,"creature_id":36,"item_id":21,"chance":0.85,"condition":"Derrota em combate","created_at":"2026-08-27T21:19:14.458Z","updated_at":"2026-08-27T21:19:14.458Z"}
-{"id":44,"creature_id":37,"item_id":22,"chance":0.85,"condition":"Derrota em combate","created_at":"2026-08-27T21:19:14.458Z","updated_at":"2026-08-27T21:19:14.458Z"}
-{"id":45,"creature_id":38,"item_id":22,"chance":0.85,"condition":"Derrota em combate","created_at":"2026-08-27T21:19:14.458Z","updated_at":"2026-08-27T21:19:14.458Z"}
 {"id":46,"creature_id":39,"item_id":22,"chance":0.85,"condition":"Derrota em combate","created_at":"2026-08-27T21:19:14.458Z","updated_at":"2026-08-27T21:19:14.458Z"}
-{"id":47,"creature_id":40,"item_id":22,"chance":0.85,"condition":"Derrota em combate","created_at":"2026-08-27T21:19:14.458Z","updated_at":"2026-08-27T21:19:14.458Z"}
-{"id":48,"creature_id":41,"item_id":22,"chance":0.85,"condition":"Derrota em combate","created_at":"2026-08-27T21:19:14.458Z","updated_at":"2026-08-27T21:19:14.458Z"}
-{"id":49,"creature_id":42,"item_id":22,"chance":0.85,"condition":"Derrota em combate","created_at":"2026-08-27T21:19:14.458Z","updated_at":"2026-08-27T21:19:14.458Z"}
 {"id":50,"creature_id":43,"item_id":23,"chance":0.85,"condition":"Derrota em combate","created_at":"2026-08-27T21:19:14.458Z","updated_at":"2026-08-27T21:19:14.458Z"}
 {"id":51,"creature_id":44,"item_id":23,"chance":0.85,"condition":"Derrota em combate","created_at":"2026-08-27T21:19:14.458Z","updated_at":"2026-08-27T21:19:14.458Z"}
 {"id":52,"creature_id":45,"item_id":23,"chance":0.85,"condition":"Derrota em combate","created_at":"2026-08-27T21:19:14.458Z","updated_at":"2026-08-27T21:19:14.458Z"}

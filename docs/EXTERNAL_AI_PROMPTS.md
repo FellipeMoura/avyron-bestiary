@@ -55,9 +55,10 @@ Dois repositórios irmãos:
   mais marcante, 1.7x).
 - **Escopo de conteúdo:** 3 eras, cada uma dividida em 3 submapas (9 mapas
   no total) — cada submapa é um `game_map` próprio, não um período
-  geológico rígido. `~20 criaturas inéditas` é meta agregada por era; a
-  distribuição entre os 3 submapas de cada era ainda não foi decidida
-  (reaparições em mapas posteriores não contam pro limite).
+  geológico rígido. **Não existe quantidade-alvo de criaturas por mapa nem
+  por era** (a meta de `~20 inéditas` foi retirada em 2026-09): o elenco de
+  um mapa é o que está cadastrado nele, e reaparições em mapas posteriores
+  são intencionais e sem restrição de contagem.
 
 ## Estado atual do roster (pode estar desatualizado — pergunte se importa)
 31 criaturas, todas no primeiro submapa de Aetheris (PZ-01 "Aetheris I —
