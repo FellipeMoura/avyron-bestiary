@@ -52,7 +52,7 @@ function isFkViolation(err: any): boolean {
  * items, etc.
  *
  * Resources with FK resolution (creatures, missions, drops...) or extra
- * invariants (awakenings 1-to-1) write their Service by hand.
+ * invariants (npc-duelists: one Glifo per arena) write their Service by hand.
  */
 export function createSimpleCrudService(opts: CrudFactoryOptions) {
   const { table, entityName, humanName, allowedFields, displayField, codePrefix } = opts;

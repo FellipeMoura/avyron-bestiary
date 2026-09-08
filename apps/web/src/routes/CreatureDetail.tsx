@@ -3,7 +3,6 @@ import { CardImage } from "../components/CardImage";
 import {
   useAbilities,
   useAbilityStats,
-  useAwakeningByCreature,
   useBiomes,
   useCaptureRule,
   useCombatRules,
@@ -27,7 +26,6 @@ import { cn } from "../lib/cn";
 import {
   ABILITY_EFFECT_LABEL,
   type AbilityEffect,
-  AWAKENING_TYPE_LABEL,
   ERA_LABEL,
   PRIMARY_STAT_LABEL,
   type PrimaryStat,
@@ -59,13 +57,13 @@ import {
  *   - número herói (CRT-001) como âncora, mono XL
  *   - escala fóssil vertical `moss` à esquerda, evocando a barra de
  *     referência ao lado de um espécime
- *   - comparador lado a lado: forma base vs Despertar, com um único acento
- *     ember no chip de tipo
+ *   - ficha da forma base ao lado do painel do Despertar Ancestral — que é
+ *     regra global de `combat_rules`, não linha da criatura, e por isso mostra
+ *     os mesmos números em toda ficha, com um único acento ember
  */
 export function CreatureDetail() {
   const { code } = useParams<{ code: string }>();
   const creature = useCreature(code);
-  const awakening = useAwakeningByCreature(code);
   const classes = useCreatureClasses();
   const elements = useElements();
   const maps = useMaps();
@@ -173,49 +171,43 @@ export function CreatureDetail() {
           note={c.silhouetteNote ?? null}
           noteLabel="silhueta"
         />
-        {awakening.data ? (
-          <FormPanel
-            eyebrow="despertar ancestral"
-            title={awakening.data.name}
-            code={awakening.data.code}
-            rows={[
-              [
-                "tipo",
-                <TypeChip
-                  key="type"
-                  type={awakening.data.type}
-                  chance={awakening.data.activationChancePct}
-                />,
-              ],
-              ["espécie de referência", awakening.data.referenceSpecies ?? "—"],
-              // O multiplicador e a duracao moram em `creature_stats`, nao na
-              // linha do despertar — mas e aqui que eles significam algo.
-              [
-                "multiplicador",
-                stat ? `×${formatNumber(stat.awakeningMultiplier)} nos stats` : "—",
-              ],
-              [
-                "duração",
-                stat
-                  ? `${stat.awakeningDurationTurns} ${plural(stat.awakeningDurationTurns, "turno")}`
-                  : "—",
-              ],
-            ]}
-            note={awakening.data.visualChanges ?? awakening.data.notes ?? null}
-            noteLabel="mudanças visuais"
-          />
-        ) : (
-          <div className="bg-void p-6 md:p-8">
-            <p className="font-mono text-micro uppercase tracking-widest text-graphite">
-              despertar ancestral
-            </p>
-            <p className="mt-6 font-display text-lg text-bone/40">não cadastrado</p>
-            <p className="mt-2 font-sans text-xs text-bone/50">
-              Esta criatura não tem despertar registrado. A ausência de linha significa
-              que o design ainda está em aberto.
-            </p>
-          </div>
-        )}
+        {/*
+          O Despertar Ancestral é um buff universal: nenhuma criatura tem linha
+          própria, os dois números vêm de `combat_rules` e valem para o elenco
+          inteiro. O que é desta criatura é só o golpe exclusivo que o buff libera.
+        */}
+        <FormPanel
+          eyebrow="despertar ancestral"
+          title="Buff de combate"
+          rows={[
+            [
+              "efeito",
+              combat.data
+                ? `×${formatNumber(combat.data.awakeningMultiplier)} em Ataque e Defesa`
+                : "—",
+            ],
+            [
+              "duração",
+              combat.data
+                ? `${combat.data.awakeningDurationTurns} ${plural(combat.data.awakeningDurationTurns, "turno")}`
+                : "—",
+            ],
+            [
+              "golpe exclusivo",
+              (() => {
+                const links = abilityLinks.data ?? [];
+                const byId = new Map((abilities.data ?? []).map((a) => [a.id, a]));
+                const names = links
+                  .map((l) => byId.get(l.abilityId))
+                  .filter((a) => a?.awakeningOnly)
+                  .map((a) => a!.name);
+                return names.length ? names.join(", ") : "—";
+              })(),
+            ],
+          ]}
+          note="Regra global de combat_rules, igual para todo o elenco e para os dois lados do duelo. O medidor de carga ativa o buff — ver carga-e-despertar."
+          noteLabel="origem"
+        />
       </section>
 
       <StatsSection
@@ -436,12 +428,6 @@ function StatsSection({
                     ? ` · ${formatNumber(stat.realSizeMeters)} m reais`
                     : " · tamanho real não pesquisado"
                 }`,
-              ],
-              [
-                "despertar",
-                `×${formatNumber(stat.awakeningMultiplier)} por ${
-                  stat.awakeningDurationTurns
-                } ${plural(stat.awakeningDurationTurns, "turno")}`,
               ],
             ]}
           />
@@ -676,15 +662,11 @@ function CaptureSection({
             rows={[
               ["catchRate", `${rule.catchRate} de 255 · maior é mais fácil`],
               ["resistência", `${resistance} · 256 − catchRate`],
-              [
-                "multiplicador no despertar",
-                `${formatNumber(rule.awakenedMultiplier)} · vestigial`,
-              ],
             ]}
           />
           <p className="mt-4 font-sans text-xs text-bone/60">
-            O multiplicador de despertar ficou no schema mas a fórmula do Relicário não
-            tem termo de Despertar — mudar esse número hoje não muda nada em jogo.
+            A fórmula do Relicário não tem termo de HP nem de Despertar Ancestral — capturar
+            é decisão sobre equipamento e combinação de elemento/classe.
           </p>
           {rule.notes && <Note label="notas">{rule.notes}</Note>}
         </div>
@@ -1143,26 +1125,6 @@ function FormPanel({ eyebrow, title, code, rows, note, noteLabel }: FormPanelPro
   );
 }
 
-function TypeChip({
-  type,
-  chance,
-}: {
-  type: "reinforcement" | "swap";
-  chance: number | null;
-}) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-2 border px-2 py-0.5 font-mono text-micro uppercase tracking-widest",
-        type === "swap" ? "border-ember/60 text-ember" : "border-moss/60 text-moss",
-      )}
-    >
-      {AWAKENING_TYPE_LABEL[type]}
-      {chance !== null && <span>· {chance}%</span>}
-    </span>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // peças compartilhadas pelas seções de número
 
@@ -1260,9 +1222,10 @@ function Legend() {
           <DocLink slug="escala-das-criaturas">escala das criaturas</DocLink>.
         </LegendRow>
         <LegendRow term="despertar">
-          Multiplicador e duração ficam em <Mono>creature_stats</Mono>, não na linha do
-          despertar. O medidor enche com dano sofrido e causado, escalado por Stamina —
-          ver <DocLink slug="carga-e-despertar">carga e despertar</DocLink>.
+          Buff universal: multiplicador e duração são globais, em <Mono>combat_rules</Mono>,
+          e nenhuma criatura tem linha própria. O medidor enche com dano sofrido e causado,
+          escalado por Stamina, zera ao ativar, e a IA adversária ativa sozinha — ver{" "}
+          <DocLink slug="carga-e-despertar">carga e despertar</DocLink>.
         </LegendRow>
         <LegendRow term="habilidades">
           Três tabelas: o vínculo diz quando se aprende, <Mono>abilities</Mono> diz o que o

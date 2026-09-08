@@ -33,7 +33,6 @@ export const TABLES: readonly string[] = [
   "npcs",
   "creatures",
   "abilities",
-  "awakenings",
   "missions",
   "drops",
   "mining_rates",

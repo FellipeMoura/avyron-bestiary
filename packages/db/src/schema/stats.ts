@@ -15,7 +15,7 @@ import { timestamps } from "./timestamps";
  *   ability_stats    — 1:1 with abilities, the executable move numbers
  *   capture_rules    — 1:1 with creatures, capture difficulty
  *   creature_abilities — junction; which creature knows which move, at what level
- *   combat_rules     — singleton, as constantes de dano/carga/captura
+ *   combat_rules     — singleton, as constantes de dano/carga/Despertar/captura
  *   item_stats       — 1:1 with items, preço e efeito executável
  *   economy_rules    — singleton, moeda e margem do comerciante
  *   progression_rules — singleton, curva de XP e custo de material do level-up
@@ -84,10 +84,6 @@ export const creatureStats = pgTable(
      * dividida por 5, o que hoje dá a faixa 40–90.
      */
     xpYield: integer("xp_yield").notNull().default(60),
-
-    /** Multiplier applied to attack and defense while the Despertar is active. */
-    awakeningMultiplier: real("awakening_multiplier").notNull().default(1.5),
-    awakeningDurationTurns: integer("awakening_duration_turns").notNull().default(3),
     notes: text("notes"),
     ...timestamps,
   },
@@ -113,10 +109,6 @@ export const creatureStats = pgTable(
     realSizeRange: check(
       "creature_stats_real_size_range",
       sql`${t.realSizeMeters} IS NULL OR (${t.realSizeMeters} > 0 AND ${t.realSizeMeters} <= 100)`,
-    ),
-    durationRange: check(
-      "creature_stats_duration_range",
-      sql`${t.awakeningDurationTurns} >= 1 AND ${t.awakeningDurationTurns} <= 10`,
     ),
   }),
 );
@@ -161,9 +153,10 @@ export const abilityStats = pgTable(
  * 1–255 convention (higher = easier) so the numbers read intuitively to
  * anyone who has balanced a collection game.
  *
- * `awakenedMultiplier` answers the open question in the `captura` document:
- * yes, a wild creature in Despertar Ancestral is harder to capture. Below 1
- * makes it harder; the default halves the odds.
+ * A fórmula do Relicário (documento `captura`) não tem termo de Despertar
+ * Ancestral: a coluna `awakenedMultiplier` que existiu aqui até 2026-09 ficou
+ * vestigial depois do redesenho e foi removida — coluna sem consumidor vira
+ * promessa na tela.
  */
 export const captureRules = pgTable(
   "capture_rules",
@@ -174,16 +167,11 @@ export const captureRules = pgTable(
       .unique()
       .references(() => creatures.id, { onDelete: "cascade" }),
     catchRate: integer("catch_rate").notNull(),
-    awakenedMultiplier: real("awakened_multiplier").notNull().default(0.5),
     notes: text("notes"),
     ...timestamps,
   },
   (t) => ({
     catchRange: check("capture_rules_catch_range", sql`${t.catchRate} >= 1 AND ${t.catchRate} <= 255`),
-    awakenedRange: check(
-      "capture_rules_awakened_range",
-      sql`${t.awakenedMultiplier} > 0 AND ${t.awakenedMultiplier} <= 2`,
-    ),
   }),
 );
 
@@ -279,6 +267,17 @@ export const combatRules = pgTable(
     /** Valor de referência do stat Carga: acima disso enche mais rápido. */
     chargeNeutralCharge: integer("charge_neutral_charge").notNull().default(50),
 
+    /**
+     * O buff do Despertar Ancestral: Ataque e Defesa × `awakeningMultiplier`
+     * por `awakeningDurationTurns` rodadas, e os golpes `awakeningOnly`
+     * liberados. Igual para todo o elenco desde 2026-09 — antes vivia por
+     * criatura em `creature_stats` (1.5 para "reforço", 1.7 para "troca"),
+     * quando o Despertar ainda era uma transformação em outra espécie. Virou
+     * buff, e buff é regra de combate, não ficha de espécie.
+     */
+    awakeningMultiplier: real("awakening_multiplier").notNull().default(1.5),
+    awakeningDurationTurns: integer("awakening_duration_turns").notNull().default(3),
+
     /** Captura nunca é impossível nem garantida. */
     captureMinChance: real("capture_min_chance").notNull().default(0.01),
     captureMaxChance: real("capture_max_chance").notNull().default(0.95),
@@ -318,6 +317,15 @@ export const combatRules = pgTable(
     chargeNeutralRange: check(
       "combat_rules_charge_neutral_range",
       sql`${t.chargeNeutralCharge} > 0 AND ${t.chargeNeutralCharge} <= 999`,
+    ),
+    /** Literais em `real` pelo motivo documentado em `creature_stats.sizeRange`. */
+    awakeningMultiplierRange: check(
+      "combat_rules_awakening_multiplier_range",
+      sql`${t.awakeningMultiplier} >= 1::real AND ${t.awakeningMultiplier} <= 3::real`,
+    ),
+    awakeningDurationRange: check(
+      "combat_rules_awakening_duration_range",
+      sql`${t.awakeningDurationTurns} >= 1 AND ${t.awakeningDurationTurns} <= 10`,
     ),
     captureChanceOrder: check(
       "combat_rules_capture_chance_order",

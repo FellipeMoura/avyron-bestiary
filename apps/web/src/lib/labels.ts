@@ -23,11 +23,6 @@ export const ERA_SCIENTIFIC_LABEL: Record<"paleozoic" | "mesozoic" | "cenozoic",
   cenozoic: "cenozoico",
 };
 
-export const AWAKENING_TYPE_LABEL: Record<"reinforcement" | "swap", string> = {
-  reinforcement: "reforço",
-  swap: "troca",
-};
-
 export const DOCUMENT_STATUS_LABEL: Record<"defined" | "partial" | "pending", string> = {
   defined: "definido",
   partial: "parcial",

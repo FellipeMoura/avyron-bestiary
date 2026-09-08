@@ -90,22 +90,6 @@ export function useSyncModels() {
   });
 }
 
-// ---------- awakenings ----------
-export function useAwakeningByCreature(creatureCode: string | undefined) {
-  return useQuery({
-    queryKey: ["awakenings", "by-creature", creatureCode],
-    enabled: !!creatureCode,
-    queryFn: async () => {
-      const rows = unwrap(
-        await api.GET("/awakenings", {
-          params: { query: { creatureCode: creatureCode! } },
-        }),
-      );
-      return rows[0] ?? null;
-    },
-  });
-}
-
 // ---------- biomes ----------
 export function useBiomes() {
   return useQuery({

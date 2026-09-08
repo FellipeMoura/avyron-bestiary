@@ -14,8 +14,6 @@ export const CreatureStatSchema = z
     xpYield: z.number().int(),
     sizeMeters: z.number(),
     realSizeMeters: z.number().nullable(),
-    awakeningMultiplier: z.number(),
-    awakeningDurationTurns: z.number().int(),
     notes: z.string().nullable(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
@@ -25,15 +23,13 @@ export const CreatureStatSchema = z
 export const CREATURE_STAT_FIELDS = [
   "id", "creatureId", "baseHp", "baseAttack", "baseDefense", "baseSpeed",
   "baseCharge", "growthRate", "xpYield", "sizeMeters", "realSizeMeters",
-  "awakeningMultiplier", "awakeningDurationTurns",
   "notes", "createdAt", "updatedAt",
 ] as const;
 
 /** Columns an agent may set. Excludes id / creatureId / timestamps. */
 export const CREATURE_STAT_PAYLOAD = [
   "baseHp", "baseAttack", "baseDefense", "baseSpeed", "baseCharge",
-  "growthRate", "xpYield", "sizeMeters", "realSizeMeters",
-  "awakeningMultiplier", "awakeningDurationTurns", "notes",
+  "growthRate", "xpYield", "sizeMeters", "realSizeMeters", "notes",
 ] as const;
 
 export const ListCreatureStatsQuerySchema = paginationSchema.extend({
@@ -73,8 +69,6 @@ const coreSchema = z.object({
     description: "Tamanho paleontológico real em metros. Editorial — o jogo não lê.",
     example: 2.5,
   }),
-  awakeningMultiplier: z.number().min(1).max(3).optional().openapi({ example: 1.5 }),
-  awakeningDurationTurns: z.number().int().min(1).max(10).optional().openapi({ example: 3 }),
   notes: z.string().max(500).nullish(),
 });
 

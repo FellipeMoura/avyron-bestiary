@@ -7,7 +7,6 @@ import {
   clean,
   isPlaceholder,
   orNullIfPlaceholder,
-  parseAwakeningType,
   parseBoolPtBr,
   parseEra,
   PLACEHOLDER,
@@ -101,7 +100,6 @@ export async function seedXlsx(db: Database, path: string): Promise<void> {
   await seedNpcs(db, sheet(wb, "NPCs"));
   await seedMissions(db, sheet(wb, "Missoes"));
   await seedCreatures(db, sheet(wb, "Criaturas"));
-  await seedAwakenings(db, sheet(wb, "Despertares"));
   await seedDrops(db, sheet(wb, "Drops"));
   await seedChangelog(db, sheet(wb, "Changelog"));
 }
@@ -311,36 +309,6 @@ async function seedCreatures(db: Database, ws: XLSX.WorkSheet): Promise<void> {
     n++;
   }
   console.log(`  creatures: ${n}`);
-}
-
-async function seedAwakenings(db: Database, ws: XLSX.WorkSheet): Promise<void> {
-  let n = 0;
-  for (const row of rowsOf(ws)) {
-    const code = clean(row.ID);
-    if (skipRow(code) || !code) continue;
-    const creatureId = await resolveByCode(db, schema.creatures, clean(row.Criatura_ID));
-    if (!creatureId) {
-      console.warn(`  [warn] awakening ${code}: missing creature ${row.Criatura_ID} — skipping`);
-      continue;
-    }
-    const { type, chancePct } = parseAwakeningType(row.Tipo);
-    if (!type) {
-      console.warn(`  [warn] awakening ${code}: invalid type '${row.Tipo}' — skipping`);
-      continue;
-    }
-    const name = isPlaceholder(row.Nome_Despertar) ? code : (clean(row.Nome_Despertar) ?? code);
-    await upsertByCode(db, schema.awakenings, "code", code, {
-      creatureId,
-      name,
-      type,
-      activationChancePct: chancePct,
-      referenceSpecies: clean(row.Especie_Referencia),
-      visualChanges: clean(row.Mudancas_Visuais),
-      notes: clean(row.Notas),
-    });
-    n++;
-  }
-  console.log(`  awakenings: ${n}`);
 }
 
 async function seedDrops(db: Database, ws: XLSX.WorkSheet): Promise<void> {

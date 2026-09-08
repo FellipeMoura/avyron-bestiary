@@ -101,4 +101,33 @@ export const designDocumentsService = {
       return { slug, version };
     });
   },
+
+  /**
+   * Apaga um documento. Existe porque documento de regra descontinuada não
+   * pode ficar em `/docs` para sempre com um aviso no corpo — foi o que a
+   * regra 70/30 dos Despertares virou quando o Despertar deixou de ser
+   * transformação. Como em `creaturesService.remove`, o changelog é gravado
+   * ANTES do delete e `entityId` não é FK, então a história sobrevive.
+   */
+  async remove(slug: string, body: { reason: string; impact: string }) {
+    return db.transaction(async (tx) => {
+      const existing = await tx
+        .select({ id: schema.designDocuments.id, title: schema.designDocuments.title })
+        .from(schema.designDocuments)
+        .where(eq(schema.designDocuments.slug, slug))
+        .limit(1);
+      const row = existing[0];
+      if (!row) throw new AppError(`Document '${slug}' not found`, 404);
+
+      const version = await recordChange(tx, {
+        change: `Document '${slug}' deleted (${row.title})`,
+        reason: body.reason,
+        impact: body.impact,
+        entity: "design_documents",
+        entityId: row.id,
+      });
+      await tx.delete(schema.designDocuments).where(eq(schema.designDocuments.slug, slug));
+      return { slug, version };
+    });
+  },
 };

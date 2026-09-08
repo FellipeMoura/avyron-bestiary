@@ -101,7 +101,7 @@ export async function buildContextMarkdown(): Promise<string> {
   lines.push("- Foreign keys go by CODE (e.g. `classCode: \"CLS-001\"`), never by numeric id. Unknown code → 422 with the valid options.");
   lines.push("- Junctions (`/drops`, `/map-biomes`, `/elemental-advantages`) POST is upsert. No PATCH — re-POST to change values.");
   lines.push("- Two junctions also take DELETE, for the one thing upsert cannot express — that a link should stop existing: `/creature-abilities` (natural key: creature + ability) and `/drops` (natural key: creature + item + condition). The key goes in the body; omitting `condition` addresses the row whose condition is null, never all conditions for the pair. `chance: 0` is not a removal — the row still asserts the pairing and the export reads its existence.");
-  lines.push("- 409 on: duplicate `code`, or POST /awakenings when the creature already has one.");
+  lines.push("- 409 on: duplicate `code`.");
   lines.push("- 422 on: schema validation, unknown `?fields`, forbidden terminology, unknown FK code. Error messages name the field and list valid values.");
   lines.push("");
 
@@ -115,13 +115,13 @@ export async function buildContextMarkdown(): Promise<string> {
 
   lines.push("## Code prefixes");
   lines.push("_Every resource has a stable string code. Prefixes are preserved from the Portuguese source material — they are values, not code._");
-  lines.push("- `CRT-*` creature · `DSP-*` awakening (**D**esperta**r**) · `ELE-*` element · `CLS-*` creature class");
+  lines.push("- `CRT-*` creature · `ELE-*` element · `CLS-*` creature class");
   lines.push("- `BIO-*` biome · `HAB-*` ability (**hab**ilidade) · `ITM-*` item · `NPC-*` npc · `MIS-*` mission · `DRP-*` drop · `RLC-*` relic (**relic**ário)");
   lines.push("- Maps use era-based codes: `PZ-01` (paleozoic), `MZ-01` (mesozoic), `CZ-01` (cenozoic).");
   lines.push("");
 
   lines.push("## Terminology");
-  lines.push(`- Official term: **${OFFICIAL_TERM}** (temporary transformation, returns to base form).`);
+  lines.push(`- Official term: **${OFFICIAL_TERM}** (a temporary in-battle buff — not a transformation into another creature).`);
   lines.push('- Deprecated (rejected with 422 on any write field): **"Evolução"**, **"Forma Ancestral"**, **"Formas Ancestrais"**.');
   lines.push("");
 
@@ -129,7 +129,7 @@ export async function buildContextMarkdown(): Promise<string> {
   lines.push("- **The game is 3D**, Godot, locked isometric orthographic camera at 30° pitch / 45° yaw. Exploration is real-time; **combat is turn-based**, 1v1 with free switching, fought in-world. See documents `combate` and `camera-e-perspectiva`.");
   lines.push("- **The game is called Avyron.** Eras carry in-world names: Aetheris (paleozoic), Titanor (mesozoic), Novaterra (cenozoic). The database enum stays English — only labels changed. See document `nomenclatura`.");
   lines.push("- **Roster is closed at five classes**, listed under \"Creature classes\" below. A class is a **gameplay specialisation, not a lineage** — it names the one stat the creature is built around, and taxonomy is independent of it since 2026-08. Any creature of any lineage may carry any class; there is no taxonomic validation. See document `classes`.");
-  lines.push("- **Creature ↔ Awakening is 1:1.** `POST /awakenings` for a creature that already has one → 409.");
+  lines.push("- **Despertar Ancestral is universal and is a buff, not a transformation.** Every creature has it, both sides of a battle use it, and there is no per-creature table: the two numbers live on `combat-rules` (`awakeningMultiplier` on Attack and Defense, `awakeningDurationTurns`). Since 2026-09 — the old `awakenings` table (reinforcement/swap, reference species, 70/30 rule) is gone.");
   lines.push("- **A class boosts its own `primaryStat` and nothing else.** `primaryStatBonusPct` is percentage points (`20` = +20%), applied by the game on top of the level curve — `floor(base * (1 + growthRate * (level - 1)) * (1 + pct/100))`, on that one stat only. The number lives in the catalog because it is tuning; nothing equivalent exists in the Godot code.");
   lines.push("- **Classes still have no CLS×CLS advantage matrix** (Changelog 0.01) — no value on `creature_classes` ever depends on the OPPOSING class, and no cycle like the elemental ring exists between classes. Same refinement for the Relicário system: an *equipment* (relic) can grant a class-linked bonus to capture chance, but that is a property of the equipment, not a class-vs-class matchup. The Relicário no longer grants a combat status buff (removed from the system's scope — see `relicario`). See documents `classes`, `captura`, `relicario`.");
   lines.push("- **Elements DO influence combat**, as a closed ring: Agua → Fogo → Natureza → Terra → Eletricidade → Agua (arrow means \"beats\"). Advantage 2.0, disadvantage 0.5, everything else 1.0 by omission. Each element beats exactly one and loses to exactly one — the symmetry is the point. **Gelo (ELE-006) was removed in 2026-08**, along with its four abilities and its elemental crystal; the ring closed with Terra → Eletricidade.");
@@ -139,16 +139,16 @@ export async function buildContextMarkdown(): Promise<string> {
 
   lines.push("## Numbers layer");
   lines.push("_The catalog tables stay descriptive; everything the Godot build needs to run a battle lives here._");
-  lines.push("- `combat-rules` — **singleton**, the tuning constants (damage scale, charge fill rates, capture bounds, level cap). `GET /combat-rules` and `PATCH /combat-rules`; no code, no list, no POST. This is where balance is tuned.");
+  lines.push("- `combat-rules` — **singleton**, the tuning constants (damage scale, charge fill rates, Despertar multiplier and duration, capture bounds, level cap). `GET /combat-rules` and `PATCH /combat-rules`; no code, no list, no POST. This is where balance is tuned.");
   lines.push("- `progression-rules` — **singleton**, the level-up constants (XP curve, XP yield divisor, material cost per level). `GET` and `PATCH` only, same shape as `combat-rules`.");
   lines.push("_The four below use upsert semantics — re-POST to change a value, no PATCH._");
   lines.push("- `creature-stats` — 1:1 with a creature, addressed by creature code. Five base stats (`baseHp`, `baseAttack`, `baseDefense`, `baseSpeed`, `baseCharge`) plus `growthRate` and `xpYield`.");
   lines.push("  Effective value: `floor(base * (1 + growthRate * (level - 1)))`.");
   lines.push("- `ability-stats` — 1:1 with an ability. `power` 0 means a status move; `effectCode` is the switch the battle system runs on.");
-  lines.push("- `capture-rules` — 1:1 with a creature. `catchRate` 1–255, higher is easier — still the source field, but as of the Relicário system (`relicario` document) the capture formula reads it inverted, `resistance = 256 - catchRate`. `awakenedMultiplier` is vestigial: the new formula has no Despertar term.");
+  lines.push("- `capture-rules` — 1:1 with a creature. `catchRate` 1–255, higher is easier — still the source field, but as of the Relicário system (`relicario` document) the capture formula reads it inverted, `resistance = 256 - catchRate`. The formula has no Despertar term.");
   lines.push("- `creature-abilities` — junction, which creature knows which move and at what level.");
-  lines.push("- Damage: `floor((power * attack / defense) * 0.4 * elementMultiplier * random(0.90, 1.10))`, minimum 1.");
-  lines.push("- The Despertar meter fills on damage taken (×1.0) and dealt (×0.5), scaled by `baseCharge / 50`. Full at 100, lasts 3 turns. See document `carga-e-despertar`.");
+  lines.push("- Damage: `floor((power * attack / defense) * damageConstant * elementMultiplier * random(damageVarianceMin, damageVarianceMax))`, minimum `damageMinimum`. Constants are on `combat-rules`, never transcribed here — read them.");
+  lines.push("- The Despertar meter fills on damage taken (×`chargeTakenMultiplier`) and dealt (×`chargeDealtMultiplier`), scaled by `effectiveCharge / chargeNeutralCharge`. Full at `chargeMax`; activating zeroes the meter, does not consume the turn, and the enemy AI activates as soon as it is full. While active: Attack and Defense × `awakeningMultiplier` for `awakeningDurationTurns`, `awakeningOnly` abilities unlocked; switching out reverts. See document `carga-e-despertar`.");
   lines.push("");
 
   lines.push("## Level progression");
@@ -251,7 +251,6 @@ export async function buildContextMarkdown(): Promise<string> {
     "elemental-advantages",
     "creature-classes",
     "creatures",
-    "awakenings",
     "maps",
     "biomes",
     "map-biomes",

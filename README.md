@@ -68,7 +68,7 @@ Os arquivos originais do jogo (`.docx`, `.xlsx`) ficam em `./fontes/` mas **não
 
 - schemas do banco (packages/db/src/schema)
 - migrations (packages/db/drizzle)
-- lote curado do Paleozoico (packages/db/src/seed/content/paleozoic-batch-1.ts) — 16 criaturas + despertares que já são código, não dados externos
+- lote curado do Paleozoico (packages/db/src/seed/content/paleozoic-batch-1.ts) — 16 criaturas que já são código, não dados externos
 
 O que precisa dos fontes: as tabelas de referência (elementos, classes, mapas, biomas base) + os documentos da Design Bible + o histórico do xlsx. Sem os fontes, `pnpm db:seed` avisa `[skip]` mas os lotes curados ainda rodam.
 
@@ -119,7 +119,7 @@ game/
 
 ## Recursos da API
 
-**Catálogo:** `elements`, `elemental-advantages`, `creature-classes`, `creatures`, `awakenings`, `maps`, `biomes`, `map-biomes`, `abilities`, `items`, `npcs`, `missions`, `drops`, `documents`, `changelog`.
+**Catálogo:** `elements`, `elemental-advantages`, `creature-classes`, `creatures`, `maps`, `biomes`, `map-biomes`, `abilities`, `items`, `npcs`, `missions`, `drops`, `documents`, `changelog`.
 
 **Camada de números** (o que o jogo executa): `combat-rules` e `economy-rules` (singletons de tuning), `creature-stats`, `ability-stats`, `capture-rules`, `creature-abilities`, `item-stats`, `mining-rates`, `merchant-offers`.
 
@@ -157,7 +157,7 @@ O vínculo criatura ↔ placeholder é N:1 e se faz por `PATCH /creatures/{code}
 ## UI (8 telas)
 
 - `/bestiary` — lista com filtros era/classe/elemento/mapa sincronizados na URL
-- `/bestiary/:code` — a ficha, com hero number CRT-XXX, arte do card + comparador base ↔ despertar lado a lado
+- `/bestiary/:code` — a ficha, com hero number CRT-XXX, arte do card + painel do Despertar Ancestral (regra global de `combat_rules`)
 - `/maps` — a corrente de mapas e o chão de cada um: o plano do mapa desenhado a partir de `map_biome_regions` e **resolvido** pela regra do schema (primeira região que casa, em `sortOrder`, vence; o resto cai no fallback declarado), a travessia de biomas com a fração do plano que cada um ocupa, quem habita o mapa, o que a saída cobra, e o balanço dos Glifos. É a tela que torna visível o bioma que está na travessia e não ocupa chão nenhum
 - `/elements` — a paleta canônica dos elementos, e a única tela de escrita do app (ver CLAUDE.md)
 - `/items` — catálogo editorial e camada de números lado a lado: preço, preço de revenda derivado do `sellRatio`, par `effectCode`/`effectValue` lido na unidade certa, oferta de comerciante e peso de mineração por classe e bioma. Fecha com a legenda do que cada campo decide no jogo

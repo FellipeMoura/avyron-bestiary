@@ -4,11 +4,13 @@ import { requireApiKey } from "../../shared/middleware/apiKey";
 import { writeLimiter } from "../../shared/middleware/rateLimit";
 import { validateBody, validateParams, validateQuery } from "../../shared/middleware/validate";
 import { registry } from "../../shared/openapi/registry";
+import { changeMetadataSchema } from "../../shared/services/query";
 import { rejectForbiddenTerms } from "../../shared/services/terminology";
 import { designDocumentsController } from "./DesignDocumentsController";
 import {
   CreateDesignDocumentBodySchema,
   CreatedResponseSchema,
+  DeletedResponseSchema,
   DesignDocumentSchema,
   ListDesignDocumentsQuerySchema,
   SlugParamsSchema,
@@ -109,4 +111,29 @@ designDocumentsRouter.patch(
   validateParams(SlugParamsSchema),
   validateBody(UpdateDesignDocumentBodySchema),
   designDocumentsController.update,
+);
+
+registry.registerPath({
+  method: "delete",
+  path: "/documents/{slug}",
+  tags: [TAG],
+  security: [{ ApiKey: [] }],
+  summary: "Delete a document (a rule that stopped existing)",
+  request: {
+    params: SlugParamsSchema,
+    body: { content: { "application/json": { schema: changeMetadataSchema } }, required: true },
+  },
+  responses: {
+    200: { content: { "application/json": { schema: DeletedResponseSchema } }, description: "Deleted" },
+    404: { description: "Not found" },
+  },
+});
+designDocumentsRouter.delete(
+  "/:slug",
+  writeLimiter,
+  requireApiKey,
+  rejectForbiddenTerms,
+  validateParams(SlugParamsSchema),
+  validateBody(changeMetadataSchema),
+  designDocumentsController.delete,
 );

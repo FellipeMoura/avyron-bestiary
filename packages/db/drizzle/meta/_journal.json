@@ -162,6 +162,13 @@
       "when": 1788736579433,
       "tag": "0022_easy_jackpot",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1788820088979,
+      "tag": "0023_despertar_buff_global",
+      "breakpoints": true
     }
   ]
 }

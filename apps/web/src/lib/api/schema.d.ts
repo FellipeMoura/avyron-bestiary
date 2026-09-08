@@ -421,211 +421,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/awakenings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List awakenings */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                    offset?: number | null;
-                    fields?: string;
-                    creatureCode?: string;
-                    type?: "reinforcement" | "swap";
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Awakening"][];
-                    };
-                };
-            };
-        };
-        put?: never;
-        /** Create awakening */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateAwakeningBody"];
-                };
-            };
-            responses: {
-                /** @description Created */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CreatedResponse"];
-                    };
-                };
-                /** @description Code already exists */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Validation failed or deprecated term */
-                422: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/awakenings/batch": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Batch create awakenings */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["BatchCreateAwakeningsBody"];
-                };
-            };
-            responses: {
-                /** @description Created */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["BatchCreatedResponse"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/awakenings/{code}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get one by code */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    code: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description The row */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Awakening"];
-                    };
-                };
-                /** @description Not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Update awakening */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    code: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateAwakeningBody"];
-                };
-            };
-            responses: {
-                /** @description Updated */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["UpdatedResponse"];
-                    };
-                };
-                /** @description Not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Validation failed or deprecated term */
-                422: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        trace?: never;
-    };
     "/biomes": {
         parameters: {
             query?: never;
@@ -2364,7 +2159,51 @@ export interface paths {
         };
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete a document (a rule that stopped existing) */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /**
+                         * @description Por que a mudança está sendo feita. Vai para o changelog.
+                         * @example 6º elemento definido para expansão do Cenozoico
+                         */
+                        reason: string;
+                        /**
+                         * @description O que essa mudança afeta. Vai para o changelog.
+                         * @example Habilita habilidades e criaturas de tipo Sombra
+                         */
+                        impact: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Deleted */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DeletedDesignDocumentResponse"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         options?: never;
         head?: never;
         /** Update a document */
@@ -6559,101 +6398,6 @@ export interface components {
              */
             impact: string;
         };
-        /** @description Ancestral Awakening: a temporary transformation of a creature, with return to its base form. One-to-one with creatures. */
-        Awakening: {
-            id: number;
-            /** @example DSP-001 */
-            code: string;
-            creatureId: number;
-            name: string;
-            /** @enum {string} */
-            type: "reinforcement" | "swap";
-            activationChancePct: number | null;
-            referenceSpecies: string | null;
-            visualChanges: string | null;
-            notes: string | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        BatchCreateAwakeningsBody: {
-            items: {
-                code: string;
-                /**
-                 * @description Reference by creature code — 1-to-1: fails 409 if the creature already has one
-                 * @example CRT-001
-                 */
-                creatureCode: string;
-                name: string;
-                /** @enum {string} */
-                type: "reinforcement" | "swap";
-                activationChancePct?: number | null;
-                referenceSpecies?: string | null;
-                visualChanges?: string | null;
-                notes?: string | null;
-            }[];
-            /**
-             * @description Por que a mudança está sendo feita. Vai para o changelog.
-             * @example 6º elemento definido para expansão do Cenozoico
-             */
-            reason: string;
-            /**
-             * @description O que essa mudança afeta. Vai para o changelog.
-             * @example Habilita habilidades e criaturas de tipo Sombra
-             */
-            impact: string;
-        };
-        CreateAwakeningBody: {
-            code: string;
-            /**
-             * @description Reference by creature code — 1-to-1: fails 409 if the creature already has one
-             * @example CRT-001
-             */
-            creatureCode: string;
-            name: string;
-            /** @enum {string} */
-            type: "reinforcement" | "swap";
-            activationChancePct?: number | null;
-            referenceSpecies?: string | null;
-            visualChanges?: string | null;
-            notes?: string | null;
-            /**
-             * @description Por que a mudança está sendo feita. Vai para o changelog.
-             * @example 6º elemento definido para expansão do Cenozoico
-             */
-            reason: string;
-            /**
-             * @description O que essa mudança afeta. Vai para o changelog.
-             * @example Habilita habilidades e criaturas de tipo Sombra
-             */
-            impact: string;
-        };
-        UpdateAwakeningBody: {
-            code?: string;
-            /**
-             * @description Reference by creature code — 1-to-1: fails 409 if the creature already has one
-             * @example CRT-001
-             */
-            creatureCode?: string;
-            name?: string;
-            /** @enum {string} */
-            type?: "reinforcement" | "swap";
-            activationChancePct?: number | null;
-            referenceSpecies?: string | null;
-            visualChanges?: string | null;
-            notes?: string | null;
-            /**
-             * @description Por que a mudança está sendo feita. Vai para o changelog.
-             * @example 6º elemento definido para expansão do Cenozoico
-             */
-            reason: string;
-            /**
-             * @description O que essa mudança afeta. Vai para o changelog.
-             * @example Habilita habilidades e criaturas de tipo Sombra
-             */
-            impact: string;
-        };
         Biome: {
             id: number;
             /** @example BIO-001 */
@@ -6748,7 +6492,6 @@ export interface components {
             id: number;
             creatureId: number;
             catchRate: number;
-            awakenedMultiplier: number;
             notes: string | null;
             /** Format: date-time */
             createdAt: string;
@@ -6768,11 +6511,6 @@ export interface components {
                  * @example 190
                  */
                 catchRate: number;
-                /**
-                 * @description Multiplicador aplicado quando o alvo está em Despertar Ancestral. Abaixo de 1 dificulta.
-                 * @example 0.5
-                 */
-                awakenedMultiplier?: number;
                 notes?: string | null;
             }[];
             /**
@@ -6798,11 +6536,6 @@ export interface components {
              * @example 190
              */
             catchRate: number;
-            /**
-             * @description Multiplicador aplicado quando o alvo está em Despertar Ancestral. Abaixo de 1 dificulta.
-             * @example 0.5
-             */
-            awakenedMultiplier?: number;
             notes?: string | null;
             /**
              * @description Por que a mudança está sendo feita. Vai para o changelog.
@@ -6900,6 +6633,8 @@ export interface components {
             chargeTakenMultiplier: number;
             chargeDealtMultiplier: number;
             chargeNeutralCharge: number;
+            awakeningMultiplier: number;
+            awakeningDurationTurns: number;
             captureMinChance: number;
             captureMaxChance: number;
             levelMin: number;
@@ -6940,6 +6675,16 @@ export interface components {
             chargeDealtMultiplier?: number;
             /** @example 50 */
             chargeNeutralCharge?: number;
+            /**
+             * @description Buff do Despertar Ancestral: Ataque e Defesa multiplicados por este valor enquanto ativo. Global — vale para todo o elenco e para os dois lados.
+             * @example 1.5
+             */
+            awakeningMultiplier?: number;
+            /**
+             * @description Rodadas que o buff dura depois de ativado.
+             * @example 3
+             */
+            awakeningDurationTurns?: number;
             /** @example 0.01 */
             captureMinChance?: number;
             /** @example 0.95 */
@@ -7175,8 +6920,6 @@ export interface components {
             xpYield: number;
             sizeMeters: number;
             realSizeMeters: number | null;
-            awakeningMultiplier: number;
-            awakeningDurationTurns: number;
             notes: string | null;
             /** Format: date-time */
             createdAt: string;
@@ -7224,10 +6967,6 @@ export interface components {
                  * @example 2.5
                  */
                 realSizeMeters?: number | null;
-                /** @example 1.5 */
-                awakeningMultiplier?: number;
-                /** @example 3 */
-                awakeningDurationTurns?: number;
                 notes?: string | null;
             }[];
             /**
@@ -7281,10 +7020,6 @@ export interface components {
              * @example 2.5
              */
             realSizeMeters?: number | null;
-            /** @example 1.5 */
-            awakeningMultiplier?: number;
-            /** @example 3 */
-            awakeningDurationTurns?: number;
             notes?: string | null;
             /**
              * @description Por que a mudança está sendo feita. Vai para o changelog.
@@ -7512,6 +7247,10 @@ export interface components {
              * @example Habilita habilidades e criaturas de tipo Sombra
              */
             impact: string;
+        };
+        DeletedDesignDocumentResponse: {
+            slug: string;
+            version: string;
         };
         Drop: {
             id: number;

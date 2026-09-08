@@ -10,7 +10,6 @@ import { buildOpenApiDocument } from "./shared/openapi/registry.js";
 import { checkHealth } from "./shared/services/health.js";
 import { abilitiesRouter } from "./modules/abilities/AbilitiesRoutes.js";
 import { abilityStatsRouter } from "./modules/abilityStats/AbilityStatsRoutes.js";
-import { awakeningsRouter } from "./modules/awakenings/AwakeningsRoutes.js";
 import { biomesRouter } from "./modules/biomes/BiomesRoutes.js";
 import { captureRulesRouter } from "./modules/captureRules/CaptureRulesRoutes.js";
 import { creatureSpawnRulesRouter } from "./modules/creatureSpawnRules/CreatureSpawnRulesRoutes.js";
@@ -91,7 +90,6 @@ export function createApp() {
   v1.use("/elemental-advantages", elementalAdvantagesRouter);
   v1.use("/creature-classes", creatureClassesRouter);
   v1.use("/creatures", creaturesRouter);
-  v1.use("/awakenings", awakeningsRouter);
   v1.use("/maps", gameMapsRouter);
   v1.use("/biomes", biomesRouter);
   v1.use("/map-biomes", mapBiomesRouter);

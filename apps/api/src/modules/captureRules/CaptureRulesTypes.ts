@@ -6,7 +6,6 @@ export const CaptureRuleSchema = z
     id: z.number().int(),
     creatureId: z.number().int(),
     catchRate: z.number().int(),
-    awakenedMultiplier: z.number(),
     notes: z.string().nullable(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
@@ -14,10 +13,10 @@ export const CaptureRuleSchema = z
   .openapi("CaptureRule");
 
 export const CAPTURE_RULE_FIELDS = [
-  "id", "creatureId", "catchRate", "awakenedMultiplier", "notes", "createdAt", "updatedAt",
+  "id", "creatureId", "catchRate", "notes", "createdAt", "updatedAt",
 ] as const;
 
-export const CAPTURE_RULE_PAYLOAD = ["catchRate", "awakenedMultiplier", "notes"] as const;
+export const CAPTURE_RULE_PAYLOAD = ["catchRate", "notes"] as const;
 
 export const ListCaptureRulesQuerySchema = paginationSchema.extend({
   fields: z.string().optional(),
@@ -33,11 +32,6 @@ const coreSchema = z.object({
   catchRate: z.number().int().min(1).max(255).openapi({
     description: "1–255, maior é mais fácil. Convenção herdada do gênero para leitura intuitiva.",
     example: 190,
-  }),
-  awakenedMultiplier: z.number().min(0.01).max(2).optional().openapi({
-    description:
-      "Multiplicador aplicado quando o alvo está em Despertar Ancestral. Abaixo de 1 dificulta.",
-    example: 0.5,
   }),
   notes: z.string().max(500).nullish(),
 });

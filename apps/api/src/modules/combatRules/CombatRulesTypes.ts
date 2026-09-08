@@ -16,6 +16,8 @@ export const CombatRuleSchema = z
     chargeTakenMultiplier: z.number(),
     chargeDealtMultiplier: z.number(),
     chargeNeutralCharge: z.number().int(),
+    awakeningMultiplier: z.number(),
+    awakeningDurationTurns: z.number().int(),
     captureMinChance: z.number(),
     captureMaxChance: z.number(),
     levelMin: z.number().int(),
@@ -29,7 +31,7 @@ export const CombatRuleSchema = z
 
 /**
  * Todo campo é opcional: ajustar uma constante não deve exigir reenviar as
- * outras treze. Os limites espelham os CHECK do banco, para o erro chegar
+ * outras. Os limites espelham os CHECK do banco, para o erro chegar
  * com o nome do campo em vez de virar uma violação de constraint crua.
  */
 const coreSchema = z.object({
@@ -51,6 +53,16 @@ const coreSchema = z.object({
     example: 1.5,
   }),
   chargeNeutralCharge: z.number().int().gt(0).max(999).optional().openapi({ example: 50 }),
+
+  awakeningMultiplier: z.number().min(1).max(3).optional().openapi({
+    description:
+      "Buff do Despertar Ancestral: Ataque e Defesa multiplicados por este valor enquanto ativo. Global — vale para todo o elenco e para os dois lados.",
+    example: 1.5,
+  }),
+  awakeningDurationTurns: z.number().int().min(1).max(10).optional().openapi({
+    description: "Rodadas que o buff dura depois de ativado.",
+    example: 3,
+  }),
 
   captureMinChance: z.number().min(0).max(1).optional().openapi({ example: 0.01 }),
   captureMaxChance: z.number().min(0).max(1).optional().openapi({ example: 0.95 }),
@@ -74,6 +86,7 @@ export const UpdatedResponseSchema = z
 export const COMBAT_RULE_PAYLOAD = [
   "damageConstant", "damageVarianceMin", "damageVarianceMax", "damageMinimum",
   "chargeMax", "chargeTakenMultiplier", "chargeDealtMultiplier", "chargeNeutralCharge",
+  "awakeningMultiplier", "awakeningDurationTurns",
   "captureMinChance", "captureMaxChance", "levelMin", "levelMax",
   "elementNeutralMultiplier", "notes",
 ] as const;

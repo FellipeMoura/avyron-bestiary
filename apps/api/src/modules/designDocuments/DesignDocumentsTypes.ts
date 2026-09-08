@@ -49,6 +49,9 @@ export const CreatedResponseSchema = z
 export const UpdatedResponseSchema = z
   .object({ slug: z.string(), version: z.string() })
   .openapi("UpdatedDesignDocumentResponse");
+export const DeletedResponseSchema = z
+  .object({ slug: z.string(), version: z.string() })
+  .openapi("DeletedDesignDocumentResponse");
 
 export type CreateDesignDocumentBody = z.infer<typeof CreateDesignDocumentBodySchema>;
 export type UpdateDesignDocumentBody = z.infer<typeof UpdateDesignDocumentBodySchema>;

@@ -143,8 +143,8 @@ export const creaturesService = {
   },
 
   /**
-   * Removes a creature and everything hanging off it — awakening, stats,
-   * capture rule, ability links and drops all cascade. Used when a species
+   * Removes a creature and everything hanging off it — stats, capture rule,
+   * spawn rule, ability links and drops all cascade. Used when a species
    * falls out of scope, which is a design decision, not a data fix, so it
    * carries the usual reason/impact and lands in the changelog.
    *

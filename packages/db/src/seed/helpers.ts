@@ -47,25 +47,6 @@ export function parseEra(value: unknown): "paleozoic" | "mesozoic" | "cenozoic" 
   return ERA_MAP[slugify(v).replace(/-/g, "")] ?? null;
 }
 
-export function parseAwakeningType(value: unknown): {
-  type: "reinforcement" | "swap" | null;
-  chancePct: number | null;
-} {
-  const v = clean(value);
-  if (!v) return { type: null, chancePct: null };
-  const match = v.match(/^([A-Za-zÀ-ÿ]+)\s*(?:\((\d+)\s*%\))?/);
-  if (!match) return { type: null, chancePct: null };
-  const word = slugify(match[1] ?? "");
-  const pct = match[2] ? Number.parseInt(match[2], 10) : null;
-  if (word.startsWith("reforco") || word.startsWith("reforc") || word.startsWith("reinforc")) {
-    return { type: "reinforcement", chancePct: pct };
-  }
-  if (word.startsWith("troca") || word.startsWith("swap")) {
-    return { type: "swap", chancePct: pct };
-  }
-  return { type: null, chancePct: pct };
-}
-
 export function parseBoolPtBr(value: unknown): boolean {
   const v = clean(value);
   return v !== null && ["sim", "true", "1", "yes"].includes(v.toLowerCase());

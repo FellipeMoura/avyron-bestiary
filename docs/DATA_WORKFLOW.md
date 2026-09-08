@@ -109,9 +109,8 @@ Referências para calibrar: o mais frágil do elenco tem HP 40, o mais resistent
 $body = @{
   creatureCode = "CRT-028"
   catchRate = 65
-  awakenedMultiplier = 0.35
   reason = "Chefe deve ser dificil de capturar"
-  impact = "Exige enfraquecer antes; captura em Despertar fica quase inviavel"
+  impact = "Resistencia alta contra qualquer relicario; so afinidade de elemento/classe compensa"
 } | ConvertTo-Json
 
 Invoke-RestMethod "$api/capture-rules" -Method Post -Headers $h -Body $body
@@ -140,30 +139,13 @@ $body = @{
 Invoke-RestMethod "$api/creature-abilities/batch" -Method Post -Headers $h -Body $body
 ```
 
-A assinatura do Despertar fica em `learnLevel` 1 — ela é travada pela transformação estar ativa, não pelo nível.
+O golpe exclusivo do Despertar fica em `learnLevel` 1 — ele é travado pelo buff estar ativo, não pelo nível.
 
-### 5. O Despertar (opcional, mas mire no 1:1)
+### 5. Despertar — não há passo
 
-```powershell
-$body = @{
-  code = "DSP-028"
-  creatureCode = "CRT-028"
-  name = "Estemmenosuchus Coroado"
-  type = "reinforcement"        # ou "swap"
-  referenceSpecies = $null      # preencher quando for "swap"
-  notes = "As protuberancias crescem em coroa ossea continua."
-  reason = "Manter cobertura 1:1 de Despertar no bestiario"
-  impact = "Elenco segue dentro da regra 70/30 entre reforco e troca"
-} | ConvertTo-Json
+Não existe cadastro de Despertar por criatura desde 2026-09: o Despertar Ancestral é um buff universal, toda criatura o tem, e os dois números (`awakeningMultiplier`, `awakeningDurationTurns`) são globais em `combat_rules` — ajustá-los é um `PATCH /combat-rules`, como qualquer outra constante de tuning. O que é da criatura é só o golpe `awakeningOnly` do elemento dela, que já entrou no passo 4.
 
-Invoke-RestMethod "$api/awakenings" -Method Post -Headers $h -Body $body
-```
-
-**Vigie a proporção 70/30.** Hoje: 22 reforço / 9 troca (71% / 29%), cobertura 31/31. Uma criatura já com Despertar responde 409 — é 1:1.
-
-A cobertura é **meta**: o export avisa e escreve o bundle assim mesmo, e `test_data.gd` reporta sem reprovar. O que os dois **abortam/reprovam** é o caso vizinho — criatura sem Despertar que já conhece o golpe de assinatura (`awakeningOnly`), porque aí o golpe fica permanentemente bloqueado. Foi o que aconteceu com `CRT-013` até 2026-08: jogou com 5 golpes contra 6 do resto do elenco, e nenhum dos dois guardas apontava para isso. Ver [O que o export cobra](#o-que-o-export-cobra).
-
-O `awakeningMultiplier` em `creature_stats` deve acompanhar o tipo: **1.5** para reforço, **1.7** para troca.
+Até então existia a tabela `awakenings` (nome, tipo reforço/troca, espécie de referência), uma regra 70/30 entre os tipos e uma cobertura 1:1 que o export avisava e `test_data.gd` reportava. Tudo isso saiu junto com o conceito de transformação; o histórico está no changelog (0.543–0.551).
 
 ## Adicionar uma habilidade
 
@@ -417,7 +399,7 @@ $body = @{ reason="..."; impact="..." } | ConvertTo-Json
 Invoke-RestMethod "$api/creatures/CRT-028" -Method Delete -Headers $h -Body $body
 ```
 
-Despertar, stats, regra de captura, vínculos de habilidade e drops caem em cascata. A entrada de changelog sobrevive à remoção — `changelog.entityId` não é chave estrangeira de propósito.
+Stats, regra de captura, peso de spawn, vínculos de habilidade e drops caem em cascata. A entrada de changelog sobrevive à remoção — `changelog.entityId` não é chave estrangeira de propósito.
 
 ## Depois de escrever
 
@@ -441,7 +423,6 @@ O export **aborta sem escrever nada** e lista o que falta se alguma criatura est
 | | |
 |---|---|
 | criatura sem `creature_stats`, `capture_rules`, golpes ou `sizeMeters` | não dá pra instanciar nem lutar |
-| criatura sem Despertar que **conhece um golpe `awakeningOnly`** | o golpe aparece na ficha e é impossível de usar |
 | drop de `material` de classe diferente da criatura | quebra a ligação classe → material da progressão |
 | item com `effectCode` != `none` e `effectValue` zero | compra-se e não faz nada |
 | item não-mineral e não-material sem `value` | está à venda sem preço |
@@ -468,7 +449,6 @@ O export **aborta sem escrever nada** e lista o que falta se alguma criatura est
 
 | | |
 |---|---|
-| criatura sem Despertar (cobertura 1:1) | ela ainda joga, só não usa o medidor de carga |
 | elemento **sem paleta nenhuma** | as criaturas dele saem no corpo neutro; o jogo roda |
 | bioma ligado a um mapa **sem `mining_rates`** | a mineração lá cai para só-classe **em silêncio** — `MiningTable` trata lado ausente como neutro, então não há sintoma. A maioria dos biomas cadastrados ainda está assim; o documento `mineracao` manda todo `BIO-*` receber o conjunto completo de taxas, uma por minério |
 | Glifo concedido por uma arena que **travessia nenhuma exige** | esperado enquanto a era seguinte não tem mapa cadastrado — é onde Daleth está hoje |
@@ -497,7 +477,7 @@ A regra por trás: campo no bundle é promessa ao jogo. Promessa que ninguém cu
 | Código | Significa | O que fazer |
 |---|---|---|
 | 401 | falta ou está errado o `X-API-Key` | leitura é aberta, escrita não |
-| 409 | `code` duplicado, ou a criatura já tem Despertar | escolha outro código, ou use PATCH |
+| 409 | `code` duplicado | escolha outro código, ou use PATCH |
 | 422 | terminologia descontinuada em algum campo | a mensagem aponta o campo; o termo oficial é **Despertar Ancestral** |
 | 422 | código de FK inexistente | a mensagem lista os válidos |
 | 422 | `?fields=` com coluna desconhecida | a mensagem lista as colunas |

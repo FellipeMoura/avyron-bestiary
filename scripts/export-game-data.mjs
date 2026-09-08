@@ -90,6 +90,12 @@ function shapeRules(row, progression, relicRules) {
       dealtMultiplier: row.chargeDealtMultiplier,
       neutralCharge: row.chargeNeutralCharge,
     },
+    // O buff do Despertar Ancestral é global desde 2026-09 — antes vivia por
+    // criatura em `creature_stats`, quando ainda era uma transformação.
+    awakening: {
+      multiplier: row.awakeningMultiplier,
+      durationTurns: row.awakeningDurationTurns,
+    },
     capture: {
       minChance: row.captureMinChance,
       maxChance: row.captureMaxChance,
@@ -138,7 +144,6 @@ const [
   advantages,
   classes,
   creatures,
-  awakenings,
   abilities,
   abilityStats,
   creatureStats,
@@ -174,7 +179,6 @@ const [
   get(`/elemental-advantages?${LIMIT}`),
   get(`/creature-classes?${LIMIT}`),
   get(`/creatures?${LIMIT}`),
-  get(`/awakenings?${LIMIT}`),
   get(`/abilities?${LIMIT}`),
   get(`/ability-stats?${LIMIT}`),
   get(`/creature-stats?${LIMIT}`),
@@ -309,7 +313,6 @@ const statsByCreature = byId([]);
 for (const s of creatureStats) statsByCreature.set(s.creatureId, s);
 const captureByCreature = new Map(captureRules.map((c) => [c.creatureId, c]));
 const spawnByCreature = new Map(creatureSpawnRules.map((s) => [s.creatureId, s]));
-const awakeningByCreature = new Map(awakenings.map((a) => [a.creatureId, a]));
 const abilityStatByAbility = new Map(abilityStats.map((s) => [s.abilityId, s]));
 
 const movesByCreature = new Map();
@@ -353,9 +356,8 @@ const problems = [];
  * aviso alto.
  *
  * O critério é o mesmo do jogo: contradição de dado aborta, meta de conteúdo
- * avisa. Cobertura de Despertar é meta — `docs/DATA_WORKFLOW.md` chama o
- * passo de opcional de propósito, para caber cadastrar a criatura hoje e o
- * Despertar amanhã.
+ * avisa. Bioma sem `mining_rates` é meta — o jogo trata o lado ausente como
+ * neutro e segue jogável, então cabe cadastrar o bioma hoje e as taxas amanhã.
  */
 const warnings = [];
 
@@ -821,7 +823,6 @@ const outCreatures = await Promise.all(creatures.map(async (c) => {
   const s = statsByCreature.get(c.id);
   const cap = captureByCreature.get(c.id);
   const spawn = spawnByCreature.get(c.id);
-  const awk = awakeningByCreature.get(c.id);
   const moves = (movesByCreature.get(c.id) ?? []).sort((a, b) => a.sortOrder - b.sortOrder);
 
   if (!s) problems.push(`creature ${c.code} (${c.originalName}) has no creature_stats row`);
@@ -838,26 +839,6 @@ const outCreatures = await Promise.all(creatures.map(async (c) => {
   }
   if (moves.length === 0) problems.push(`creature ${c.code} (${c.originalName}) knows no abilities`);
 
-  // Golpe de assinatura sem Despertar é um golpe que o jogador vê na ficha e
-  // nunca consegue usar: `Combatant` filtra `awakeningOnly` por
-  // `is_awakened`, e sem linha em `awakenings` a criatura não desperta nunca.
-  // Foi assim que `CRT-013` jogou com 5 golpes contra 6 do resto do elenco
-  // sem nada acusar — o export não olhava, e `test_data.gd` só reclamava da
-  // cobertura 1:1, que é outra coisa.
-  if (!awk) {
-    const signature = moves
-      .map((m) => abilityById.get(m.abilityId))
-      .filter((a) => a?.awakeningOnly);
-    for (const a of signature) {
-      problems.push(
-        `creature ${c.code} (${c.originalName}) has no awakening but knows ${a.code} (${a.name}), `
-          + `which is awakeningOnly — the move would be permanently unusable`,
-      );
-    }
-    // A cobertura em si é meta, não invariante: sem Despertar a criatura
-    // ainda joga, só não usa o medidor de carga. Avisa e segue.
-    warnings.push(`creature ${c.code} (${c.originalName}) has no awakening — 1:1 coverage broken`);
-  }
   // Sem tamanho o jogo não tem como instanciar a criatura. Se a origem for um
   // deploy antigo, o campo chega `undefined`, o JSON.stringify o descarta e o
   // bundle sairia silenciosamente sem escala — falhar aqui é o ponto.
@@ -900,11 +881,9 @@ const outCreatures = await Promise.all(creatures.map(async (c) => {
           // Escala dramatizada, em unidades Godot. O tamanho real fica de
           // fora do bundle: é editorial, e o jogo não tem o que fazer com ele.
           sizeMeters: s.sizeMeters,
-          awakeningMultiplier: s.awakeningMultiplier,
-          awakeningDurationTurns: s.awakeningDurationTurns,
         }
       : null,
-    capture: cap ? { catchRate: cap.catchRate, awakenedMultiplier: cap.awakenedMultiplier } : null,
+    capture: cap ? { catchRate: cap.catchRate } : null,
     abilities: moves.map((m) => ({
       code: code(abilityById, m.abilityId),
       learnLevel: m.learnLevel,
@@ -929,14 +908,6 @@ const outCreatures = await Promise.all(creatures.map(async (c) => {
         condition: d.condition,
       };
     }),
-    awakening: awk
-      ? {
-          code: awk.code,
-          name: awk.name,
-          type: awk.type,
-          referenceSpecies: awk.referenceSpecies,
-        }
-      : null,
   };
 }));
 
@@ -949,7 +920,7 @@ const outCreatures = await Promise.all(creatures.map(async (c) => {
  * A divisão entre abortar e avisar segue o critério da casa:
  *
  *  - elemento **sem paleta nenhuma** avisa. O jogo cai no corpo neutro e
- *    continua jogável — é meta de conteúdo, como cobertura de Despertar.
+ *    continua jogável — é meta de conteúdo, como bioma sem `mining_rates`.
  *  - elemento com paleta **pela metade** aborta. Rampa sem uma das paradas
  *    não é rampa: o jogo teria de inventar a cor que falta, e o resultado
  *    seria uma criatura errada em silêncio, que é a classe de furo que o
@@ -1022,8 +993,8 @@ for (const link of [...mapBiomes].sort((a, b) => a.sortOrder - b.sortOrder)) {
  * ausente como neutro (×1) e a mineração vira só classe. É justamente por ser
  * silencioso que precisa aparecer: a dimensão some da fórmula sem ninguém ver.
  *
- * Avisa em vez de abortar, mesma política de dois níveis da cobertura de
- * Despertar: é alvo de conteúdo por preencher, não contradição de dado.
+ * Avisa em vez de abortar, a política de dois níveis da casa: é alvo de
+ * conteúdo por preencher, não contradição de dado.
  */
 const biomesWithRates = new Set(
   miningRates.filter((r) => r.biomeId != null).map((r) => r.biomeId),

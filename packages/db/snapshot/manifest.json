@@ -1,5 +1,5 @@
 {
-  "version": "0.542",
+  "version": "0.551",
   "tables": {
     "elements": 5,
     "creature_classes": 5,
@@ -7,8 +7,8 @@
     "game_maps": 3,
     "glyphs": 2,
     "items": 22,
-    "design_documents": 36,
-    "changelog": 542,
+    "design_documents": 35,
+    "changelog": 551,
     "elemental_advantages": 10,
     "map_biomes": 14,
     "map_connections": 2,
@@ -16,7 +16,6 @@
     "npcs": 2,
     "creatures": 54,
     "abilities": 27,
-    "awakenings": 25,
     "missions": 0,
     "drops": 54,
     "mining_rates": 227,

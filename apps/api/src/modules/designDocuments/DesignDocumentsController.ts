@@ -46,4 +46,15 @@ export const designDocumentsController = {
         await designDocumentsService.update(req.params.slug!, req.body as UpdateDesignDocumentBody),
       );
   }) satisfies RequestHandler,
+
+  delete: (async (req, res) => {
+    res
+      .status(200)
+      .json(
+        await designDocumentsService.remove(
+          req.params.slug!,
+          req.body as { reason: string; impact: string },
+        ),
+      );
+  }) satisfies RequestHandler,
 };

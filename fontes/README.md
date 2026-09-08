@@ -11,7 +11,7 @@ O `seed.py` lê deste diretório. Os arquivos `.docx`/`.xlsx` são ignorados pel
 
 ## O que o seed espera
 
-- **`02_Game_Database.xlsx`** — uma aba por tabela estruturada. A aba `Despertares` já está renomeada (não é mais "Evoluções"). Linhas em cinza itálico são exemplos e são ignoradas.
+- **`02_Game_Database.xlsx`** — uma aba por tabela estruturada. A aba `Despertares` já está renomeada (não é mais "Evoluções") e **não é mais importada** desde 2026-09, quando o Despertar virou buff universal sem cadastro por criatura. Linhas em cinza itálico são exemplos e são ignoradas.
 - **`01_Game_Design_Bible.docx`** — um registro por capítulo em `documentos`, convertendo para markdown e preservando o campo de status de cada capítulo.
 - **`03_Development_Log.docx`** — vira `changelog`, versões 0.01 a 0.10.
 - **`04_Roadmap.docx`** — um `documento` markdown único.

@@ -49,10 +49,11 @@ Dois repositórios irmãos:
   Eletricidade → Água (seta = vence). Gelo foi removido em agosto de 2026. Vantagem 2.0x, desvantagem 0.5x, resto
   neutro. Simetria perfeita é o ponto — nenhum elemento é objetivamente
   melhor.
-- **Despertar Ancestral** — transformação temporária em combate (3 turnos),
-  carregada por dano recebido/causado. ~70% "reforço" (mesma espécie
-  amplificada, multiplicador 1.5x) e ~30% "troca" (vira espécie relacionada
-  mais marcante, 1.7x).
+- **Despertar Ancestral** — buff temporário de combate, carregado por dano
+  recebido/causado: Ataque e Defesa multiplicados por algumas rodadas e o
+  golpe exclusivo do elemento liberado. Universal (toda criatura tem, os
+  dois lados usam) e global (os números vivem em `combat_rules`). Não é uma
+  transformação em outra espécie — isso existiu e foi desfeito em 2026-09.
 - **Escopo de conteúdo:** 3 eras, cada uma dividida em 3 submapas (9 mapas
   no total) — cada submapa é um `game_map` próprio, não um período
   geológico rígido. **Não existe quantidade-alvo de criaturas por mapa nem
@@ -66,8 +67,7 @@ Mundo dos Mares"). A distribuição por classe é derivada — conte com
 `GET /creatures?classCode=...`, não transcreva. Note que as criaturas
 herdaram a classe da linhagem antiga e a reclassificação por
 especialização ainda não foi feita, então a distribuição atual reflete
-taxonomia, não gameplay. Cobertura de
-Despertar é 1:1 (uma por criatura). Os 5 elementos têm representante — a
+taxonomia, não gameplay. Os 5 elementos têm representante — a
 lacuna que existia era Gelo, e ela foi resolvida removendo o elemento em
 vez de preenchendo-o. PZ-02 ("Aetheris II — Conquista das Margens") e PZ-03
 ("Aetheris III — Domínio Terrestre") já existem como mapas formalizados,
@@ -119,16 +119,17 @@ consistência de mundo — não arquitetura técnica.
 
 ## Critério de seleção de criatura (em ordem de prioridade)
 Diversidade visual > silhuetas únicas > potencial de gameplay > importância
-paleontológica > potencial de Despertar Ancestral. Se duas espécies têm
+paleontológica. Se duas espécies têm
 silhueta parecida demais, só uma fica.
 
-## Despertar Ancestral (o gancho narrativo central)
-Transformação temporária em combate, não permanente, não é "evolução".
-Dois sabores: **reforço** (a própria criatura fica mais imponente — placas,
-espinhos, porte maior, mesma identidade) e **troca** (vira uma espécie
-parente mais marcante — mudança visual grande, reservada pra poucos casos
-de impacto). Termo travado: é sempre "Despertar Ancestral". Nunca usar
-"Evolução" ou "Forma Ancestral", nem para dizer que caíram em desuso.
+## Despertar Ancestral (o gancho narrativo)
+Buff temporário em combate, não permanente, não é uma transformação em
+outra criatura: a criatura canaliza o espírito ancestral da linhagem, fica
+mais forte por algumas rodadas e libera o golpe exclusivo do elemento. Não
+há Despertar próprio por espécie — nem nome, nem tipo, nem espécie de
+referência — então não peça nem proponha isso. Termo travado: é sempre
+"Despertar Ancestral". Nunca usar os termos descontinuados, nem para dizer
+que caíram em desuso.
 
 ## Direção visual (pra manter o tom em qualquer texto/nome novo)
 "Arquivo científico dark editorial" — prancha zoológica moderna com volume
@@ -137,7 +138,7 @@ com parcimônia). Nomes e notas de silhueta devem soar como ficha de campo,
 não como flavor text genérico de RPG.
 
 ## Como me ajudar
-Brainstorm de nomes de criatura, nomes/lore de Despertar, notas de
+Brainstorm de nomes de criatura, lore do plano ancestral, notas de
 silhueta, textos de documento de mundo. Mantenha o tom "arquivo científico",
 respeite a regra de nomenclatura por era, e nunca proponha os termos
 descontinuados mesmo como piada ou contraste.
