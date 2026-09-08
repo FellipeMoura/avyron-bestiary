@@ -145,8 +145,9 @@ O único consumidor dos `.glb` hoje é o jogo em Godot, que importa KTX2/Basis n
 
 1. Exportar do Meshy com "gerar mapas PBR" ligado, textura 2048². **Animado:** baixe no formato de `.glb` único (malha + esqueleto + todos os clipes) — é a opção preferida; export multi-arquivo (um `.glb` por clipe) também funciona, mas é o caminho legado, mais lento e mais propenso a erro na hora de remover um clipe.
 2. **Estático:** salve como `CRT-XXX.glb` (sem sufixo de versão) direto em `apps/web/public/models/`. **Animado:** rode `pnpm models:meshy -- --source <arquivo ou pasta> --out apps/web/public/models/CRT-XXX.glb` primeiro — ele normaliza os nomes dos clipes pro vocabulário canônico (`Idle`/`Walk`/`Run`/`Attack`/`Attack2`/`Attack3`/`HitReact`/`Death`/`Swim`/`Swim_Idle`/`Dodge`) e já escreve no lugar certo.
-3. `pnpm models:optimize`
-4. Conferir a saída: geometria inalterada, redução de ~45–50% no arquivo.
-5. `pnpm game:export` e abrir a criatura no jogo para confirmar que renderiza.
+3. **Estático** (não passou pelo `models:meshy`): `pnpm models:materials` — o Meshy exporta metal puro (`metallicFactor` ausente = 1.0) com a própria textura de cor como emissivo; no jogo isso lê preto com brilho, e o passo do emissivo abaixo reduziria a textura de cor pra 512² junto. O `models:meshy` já faz essa normalização em corpo animado. Ver `scripts/fix-meshy-materials.mjs`. O elenco anterior a 2026-09-08 teve a cor reduzida a 512² por esse caminho; `pnpm models:materials -- --restore-textures` recupera a 2048² a partir do backup cru de `.model-backups/` — mais um motivo para essa pasta ser o ativo mais importante daqui.
+4. `pnpm models:optimize`
+5. Conferir a saída: geometria inalterada, redução de ~45–50% no arquivo.
+6. `pnpm game:export` e abrir a criatura no jogo para confirmar que renderiza.
 
-Se o modelo aparecer preto ou branco chapado, o suspeito número um é o `emissiveFactor` — ver a armadilha acima.
+Se o modelo aparecer preto ou branco chapado, o suspeito número um é o `emissiveFactor` — ver a armadilha acima. Se aparecer escuro **com brilho**, dos dois lados, independente da luz, é `metallicFactor` 1.0 — o passo 3 acima.

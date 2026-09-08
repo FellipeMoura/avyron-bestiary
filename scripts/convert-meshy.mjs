@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 import { NodeIO, Node } from "@gltf-transform/core";
 import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 import { copyToDocument, createDefaultPropertyResolver, unpartition } from "@gltf-transform/functions";
+import { stripRootMotion } from "./lib/root-motion.mjs";
+import { normalizeMeshyMaterials } from "./fix-meshy-materials.mjs";
 
 /**
  * Normaliza o nome dos clipes de um export do Meshy AI pro vocabulário
@@ -52,6 +54,15 @@ import { copyToDocument, createDefaultPropertyResolver, unpartition } from "@glt
  * Clipe fora do mapa não quebra nada — sai com o nome limpo (sem o invólucro
  * `Armature|...|baselayer`) e o jogo simplesmente nunca o chama por nome, mas
  * ele existe no `AnimationPlayer` pra quem quiser.
+ *
+ * ## Material
+ *
+ * O material do Meshy chega como metal puro (`metallicFactor` ausente = 1.0)
+ * com a própria textura de cor ligada como emissivo — no jogo isso lê preto
+ * com brilho, e no `models:optimize` derrubava a textura de cor pra 512².
+ * `normalizeMeshyMaterials` (`fix-meshy-materials.mjs`, onde está o porquê
+ * inteiro) corrige os dois caminhos antes de gravar, pra corpo novo já nascer
+ * como o kit de personagens: PBR comum, iluminado pela cena.
  *
  * ## Onde o resultado entra no pipeline
  *
@@ -137,100 +148,9 @@ function clipMiddleName(rawName) {
   return parts.length >= 2 ? parts[1] : rawName;
 }
 
-/**
- * O osso raiz da malha: o joint do skin que não é filho de outro joint.
- * `null` quando o documento não tem skin (corpo estático) — nada a fazer.
- */
-function rootJoint(doc) {
-  const skin = doc.getRoot().listSkins()[0];
-  if (!skin) return null;
-  const joints = skin.listJoints();
-  const isChild = new Set();
-  for (const joint of joints) {
-    for (const child of joint.listChildren()) isChild.add(child);
-  }
-  return joints.find((j) => !isChild.has(j)) ?? null;
-}
-
-/**
- * Tira o deslocamento HORIZONTAL líquido do osso raiz de cada clipe.
- *
- * **Todo clipe do jogo é in-place, sem exceção.** Quem move um corpo é sempre
- * o código — `CharacterBody3D` no jogador, a posição do ator nas criaturas —,
- * e um clipe que também anda faz o corpo viajar DUAS vezes: a malha escapa da
- * cápsula de colisão durante o ciclo e volta de um salto quando ele reinicia.
- * As bibliotecas UAL já chegam assim (o comentário de `_build_library` no
- * `character_rig.gd` chama isso de "a versão sem root motion"); o Meshy, não —
- * o `Swim_Forward` do corpo do jogador nada 2,21 m pra frente em 4,57 s, e ele
- * é o único dos sete que anda.
- *
- * Subtrai uma RAMPA LINEAR, não o valor do primeiro quadro: zerar X/Z de vez
- * mataria a ondulação lateral da braçada junto com a viagem. Tirando só a
- * reta que liga o primeiro quadro ao último sobra a oscilação em torno dela —
- * e o ciclo fecha, que é o que um clipe marcado como loop precisa. Y fica
- * intacto: a subida e descida do corpo é gesto, não viagem.
- *
- * CUBICSPLINE sai avisando em vez de ser tratado — o `output` ali guarda três
- * valores por quadro (tangente de entrada, valor, tangente de saída) e mexer
- * nele como se fosse um só produziria uma curva errada em silêncio. Nunca
- * visto num export do Meshy; se aparecer, o aviso é o pedido pra escrever o
- * caso.
- */
-function stripRootMotion(doc) {
-  const root = rootJoint(doc);
-  if (!root) return [];
-
-  const stripped = [];
-  for (const anim of doc.getRoot().listAnimations()) {
-    for (const channel of anim.listChannels()) {
-      if (channel.getTargetNode() !== root || channel.getTargetPath() !== "translation") continue;
-
-      const sampler = channel.getSampler();
-      if (sampler.getInterpolation() === "CUBICSPLINE") {
-        console.log(`  ${anim.getName().padEnd(40)} AVISO  root motion em CUBICSPLINE, nao tratado`);
-        continue;
-      }
-
-      const out = sampler.getOutput();
-      const values = out.getArray().slice();
-      const times = sampler.getInput().getArray();
-      const last = values.length / 3 - 1;
-      if (last < 1) continue;
-
-      const driftX = values[last * 3] - values[0];
-      const driftZ = values[last * 3 + 2] - values[2];
-
-      // Viagem ou oscilação? O corte é RELATIVO à própria excursão horizontal
-      // do clipe, não um número em unidades de modelo: o Meshy exporta em
-      // centímetros e a UAL em metros, e um limiar absoluto que servisse a um
-      // seria cego ou histérico no outro. Um ciclo in-place volta pra perto de
-      // onde saiu (deriva perto de zero contra uma excursão inteira); um que
-      // viaja acaba na ponta da própria excursão.
-      let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-      for (let i = 0; i <= last; i += 1) {
-        minX = Math.min(minX, values[i * 3]);
-        maxX = Math.max(maxX, values[i * 3]);
-        minZ = Math.min(minZ, values[i * 3 + 2]);
-        maxZ = Math.max(maxZ, values[i * 3 + 2]);
-      }
-      const excursion = Math.hypot(maxX - minX, maxZ - minZ);
-      const drift = Math.hypot(driftX, driftZ);
-      if (excursion === 0 || drift / excursion < 0.25) continue;
-
-      const span = times[times.length - 1] - times[0];
-      for (let i = 0; i <= last; i += 1) {
-        const ratio = span === 0 ? 0 : (times[i] - times[0]) / span;
-        values[i * 3] -= driftX * ratio;
-        values[i * 3 + 2] -= driftZ * ratio;
-      }
-      // Accessor próprio antes de escrever: um `output` compartilhado por dois
-      // clipes veria a correção do primeiro aplicada ao segundo.
-      channel.getSampler().setOutput(out.clone().setArray(values));
-      stripped.push(`${anim.getName()} (${drift.toFixed(2)}u de ${excursion.toFixed(2)}u de excursao)`);
-    }
-  }
-  return stripped;
-}
+// `rootJoint`/`stripRootMotion` moraram aqui até 2026-09-08; foram para
+// `lib/root-motion.mjs` porque o transplante de clipes e a correção in-place
+// precisam da MESMA remoção — ver o cabeçalho do módulo.
 
 /** Renomeia as animações de `doc` in-place, checando colisão. Compartilhado
  * pelos dois caminhos (arquivo único e fusão multi-arquivo). */
@@ -277,6 +197,7 @@ async function convertSingleFile(io, source, out) {
   }
 
   const stripped = stripRootMotion(doc);
+  const materials = normalizeMeshyMaterials(doc);
   await doc.transform(unpartition());
   mkdirSync(dirname(out), { recursive: true });
   await io.write(out, doc);
@@ -284,6 +205,7 @@ async function convertSingleFile(io, source, out) {
     mergedClips,
     extraClips,
     stripped,
+    materials,
     finalAnims: doc.getRoot().listAnimations().map((a) => a.getName()),
   };
 }
@@ -351,6 +273,7 @@ async function convertMultiFile(io, source, out) {
   // accessors da animação (cada arquivo Meshy embute o próprio binário) — um
   // `.glb` só aceita UM buffer, então funde todos num só antes de escrever.
   const stripped = stripRootMotion(baseDoc);
+  const materials = normalizeMeshyMaterials(baseDoc);
   await baseDoc.transform(unpartition());
 
   mkdirSync(dirname(out), { recursive: true });
@@ -359,6 +282,7 @@ async function convertMultiFile(io, source, out) {
     mergedClips,
     extraClips,
     stripped,
+    materials,
     finalAnims: baseDoc.getRoot().listAnimations().map((a) => a.getName()),
   };
 }
@@ -380,6 +304,7 @@ async function main() {
   console.log(`clipes canonicos: ${result.mergedClips.sort().join(", ") || "(nenhum)"}`);
   console.log(`clipes extras (fora do vocabulario): ${result.extraClips.sort().join(", ") || "(nenhum)"}`);
   console.log(`root motion removida de: ${result.stripped.sort().join(", ") || "(nenhum clipe andava)"}`);
+  console.log(`material normalizado: ${result.materials.join("; ") || "(ja era PBR comum)"}`);
   console.log(`total de clipes no arquivo final: ${result.finalAnims.length} — ${result.finalAnims.sort().join(", ")}`);
   console.log(`\npróximo passo: pnpm models:optimize (nenhum .glb do Meshy serve sem KTX2 — ver docs/MODEL_OPTIMIZATION.md)`);
 }
