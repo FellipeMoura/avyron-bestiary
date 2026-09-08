@@ -120,7 +120,25 @@ Invoke-RestMethod "$api/capture-rules" -Method Post -Headers $h -Body $body
 
 ### 4. Os golpes
 
-Seis por criatura é o padrão do elenco: três do elemento, um utilitário, `Concentrar` e a assinatura do Despertar.
+Desde 2026-09, o elenco do PZ-01 (`CRT-001`..`CRT-014`) segue o padrão novo, **três golpes por criatura**: 1 básico (dano do elemento, sem `awakeningOnly`), 1 buff (`buff_attack` ou `buff_defense`) e 1 elemental exclusivo do Despertar (`awakeningOnly=true`). `export-game-data.mjs` valida isso automaticamente para qualquer criatura em `map=PZ-01`, abortando o export se a contagem ou os papéis não baterem.
+
+```powershell
+$body = @{
+  items = @(
+    @{ creatureCode="CRT-001"; abilityCode="HAB-004"; learnLevel=1; sortOrder=0 }  # Jato (basico)
+    @{ creatureCode="CRT-001"; abilityCode="HAB-019"; learnLevel=8; sortOrder=1 }  # Encouracar (buff)
+    @{ creatureCode="CRT-001"; abilityCode="HAB-027"; learnLevel=1; sortOrder=2 }  # Diluvio Ancestral (Despertar)
+  )
+  reason = "Repertorio padrao de 3 golpes do PZ-01"
+  impact = "CRT-001 fica com basico, buff e elemental do Despertar"
+} | ConvertTo-Json -Depth 4
+
+Invoke-RestMethod "$api/creature-abilities/batch" -Method Post -Headers $h -Body $body
+```
+
+O golpe exclusivo do Despertar fica em `learnLevel` 1 — ele é travado pelo buff estar ativo, não pelo nível.
+
+**Fora do PZ-01**, o elenco ainda segue o padrão antigo de seis golpes até decisão de estender o padrão novo: três do elemento, um utilitário, `Concentrar` e a assinatura do Despertar.
 
 ```powershell
 $body = @{
@@ -138,8 +156,6 @@ $body = @{
 
 Invoke-RestMethod "$api/creature-abilities/batch" -Method Post -Headers $h -Body $body
 ```
-
-O golpe exclusivo do Despertar fica em `learnLevel` 1 — ele é travado pelo buff estar ativo, não pelo nível.
 
 ### 5. Despertar — não há passo
 

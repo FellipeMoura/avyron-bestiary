@@ -839,6 +839,30 @@ const outCreatures = await Promise.all(creatures.map(async (c) => {
   }
   if (moves.length === 0) problems.push(`creature ${c.code} (${c.originalName}) knows no abilities`);
 
+  // PZ-01 é o primeiro elenco a seguir o esquema padronizado de 3 golpes: 1
+  // básico (damage, não-awakening), 1 buff (buff_attack/buff_defense) e 1
+  // elemental exclusivo do Despertar Ancestral (awakeningOnly). O resto do
+  // elenco ainda segue o padrão antigo (5-6 golpes) até decisão de estender.
+  if (code(mapById, c.mapId) === "PZ-01") {
+    const roles = moves.map((m) => {
+      const ability = abilityById.get(m.abilityId);
+      const stat = abilityStatByAbility.get(m.abilityId);
+      if (ability?.awakeningOnly) return "awakening";
+      if (stat?.effectCode === "damage") return "basic";
+      if (stat?.effectCode === "buff_attack" || stat?.effectCode === "buff_defense") return "buff";
+      return "other";
+    });
+    const basicCount = roles.filter((r) => r === "basic").length;
+    const buffCount = roles.filter((r) => r === "buff").length;
+    const awakeningCount = roles.filter((r) => r === "awakening").length;
+    if (moves.length !== 3 || basicCount !== 1 || buffCount !== 1 || awakeningCount !== 1) {
+      problems.push(
+        `creature ${c.code} (${c.originalName}) is on PZ-01 and must have exactly 3 abilities `
+          + `(1 basic damage, 1 buff, 1 awakening-only) — found ${moves.length}: ${roles.join(", ") || "none"}`,
+      );
+    }
+  }
+
   // Sem tamanho o jogo não tem como instanciar a criatura. Se a origem for um
   // deploy antigo, o campo chega `undefined`, o JSON.stringify o descarta e o
   // bundle sairia silenciosamente sem escala — falhar aqui é o ponto.
