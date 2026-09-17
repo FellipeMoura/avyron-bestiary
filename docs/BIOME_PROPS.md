@@ -48,16 +48,16 @@ Duas observações que valem para o planejamento:
 
 A densidade **não** é uniforme, e essa é a decisão de design mais importante deste documento: densidade é o que faz um bioma ler como ele mesmo. Recife é espetáculo, abismo é vazio, plataforma glacial é empobrecida — e "empobrecido" se comunica pela ausência, não por props de aparência pobre.
 
-| bioma | do plano | densidade | props (120 m) | props (350 m) |
+| bioma | do plano | densidade | props (120 m) | props (175 m) |
 |---|---|---|---|---|
-| Jardins Recifais | 17,4% | **×2,5** | 68 | 582 |
-| Mar raso | 37,2% | ×1,0 *(base)* | 59 | 502 |
-| Mar Profundo | 28,0% | ×0,35 | 15 | 131 |
-| Plataforma Glacial | 4,9% | ×0,6 | 5 | 39 |
-| Costa Primordial | 12,5% | ×0,15 | 3 | 26 |
-| **total** | | | **150** | **1.280** |
+| Jardins Recifais | 17,4% | **×2,5** | 68 | 146 |
+| Mar raso | 37,2% | ×1,0 *(base)* | 59 | 125 |
+| Mar Profundo | 28,0% | ×0,35 | 15 | 33 |
+| Plataforma Glacial | 4,9% | ×0,6 | 5 | 10 |
+| Costa Primordial | 12,5% | ×0,15 | 3 | 6 |
+| **total** | | | **150** | **320** |
 
-A densidade-base é ~1 prop a cada 91 m², calibrada para o total a 120 m ficar perto dos 132 de hoje. A coluna de 350 m é a mesma conta na área do alvo declarado — está aqui porque decisões técnicas tomadas agora (§5) só fazem sentido contra ela.
+A densidade-base é ~1 prop a cada 91 m², calibrada para o total a 120 m ficar perto dos 132 de hoje. A coluna de 175 m é a mesma conta na área do mapa atual — está aqui porque decisões técnicas tomadas agora (§5) só fazem sentido contra ela. Até 2026-09-16 essa coluna era de 350 m (~1.280 props); o PZ-01 caiu então para 175 m de lado, ¼ da área, e os números acima são a mesma densidade na área nova, não um orçamento recalibrado.
 
 **A costa em ×0,15 não é descuido.** Ela é o adro da vila: comerciante, posto do Relicário e portais. Cenário lá não pode esconder um serviço, e o `MapDressing` hoje simplesmente não espalha nada na costa. As três peças do orçamento são para a borda d'água, longe dos pontos de interação.
 
@@ -104,7 +104,7 @@ O kit aquático atual é `.glb` porque as 11 peças vieram do Meshy com texturas
 
 **Destino.** `apps/web/public/models/biomes/<kit>/`, espelhado para o repo do jogo por `pnpm game:export` (diretório inteiro, ao contrário dos modelos de criatura, que são dirigidos por `modelUrl`). Um kit por bioma mantém o atlas compartilhado coerente: `glacial/`, `abyssal/`, `shallow/`, `shore/`.
 
-**Superfície única, material único.** Vale a insistência: a 350 m são ~1.280 props, e nessa escala o scatter deixa de ser nó por peça e vira `MultiMesh`. `MultiMesh` exige uma superfície e um material por lote. Peça com duas superfícies fica de fora do lote, e descobrir isso com 21 peças prontas significa reexportar as 21.
+**Superfície única, material único.** Vale a insistência mesmo com o mapa menor: a 175 m são ~320 props, o que ainda cabe como nó por peça, mas o scatter vira `MultiMesh` no dia em que a densidade subir ou um mapa maior chegar — e aí peça fora da regra já estaria pronta. `MultiMesh` exige uma superfície e um material por lote. Peça com duas superfícies fica de fora do lote, e descobrir isso com 21 peças prontas significa reexportar as 21.
 
 ---
 
