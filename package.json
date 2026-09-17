@@ -24,21 +24,19 @@
     "models:biomes": "node scripts/convert-biomes.mjs",
     "models:characters": "node scripts/convert-characters.mjs",
     "models:dungeon": "node scripts/convert-dungeon-monsters.mjs",
-    "models:meshy": "node scripts/convert-meshy.mjs",
-    "models:transfer": "node scripts/transfer-clips.mjs",
-    "models:strip": "node scripts/strip-root-motion.mjs",
-    "models:materials": "node scripts/fix-meshy-materials.mjs",
     "badges:optimize": "node scripts/optimize-badges.mjs",
     "db:reset": "pnpm db:create && pnpm db:generate && pnpm db:migrate && pnpm db:seed",
     "openapi:generate": "pnpm --filter @bestiary/web run openapi:generate",
-    "game:export": "node scripts/export-game-data.mjs"
+    "game:export": "node scripts/export-game-data.mjs",
+    "models:tripo": "node scripts/convert-tripo.mjs",
+    "models:publish": "node scripts/publish-shell.mjs",
+    "species:prompt": "node scripts/species-prompt.mjs",
+    "species:check": "node scripts/check-sheet.mjs"
   },
   "devDependencies": {
     "@gltf-transform/core": "^4.4.2",
     "@gltf-transform/extensions": "^4.4.2",
     "@gltf-transform/functions": "4.4.2",
-    "ktx2-encoder": "^0.6.0",
-    "meshoptimizer": "^1.2.0",
     "sharp": "^0.35.3",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"

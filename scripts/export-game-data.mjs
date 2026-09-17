@@ -19,7 +19,7 @@
  * without stats would be a creature the battle system divides by zero on.
  */
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
@@ -1371,6 +1371,7 @@ for (const cls of classes) {
  * incomplete record.
  */
 const WEB_MODELS_DIR = resolve(REPO_ROOT, "apps/web/public/models");
+const RAW_MODEL_BACKUPS = resolve(REPO_ROOT, "apps/web/.model-backups");
 const MODEL_URL_PREFIX = "/models/";
 
 const modelUrls = [...new Set(creatures.map((c) => c.modelUrl).filter(Boolean))];
@@ -1456,6 +1457,10 @@ if (warnings.length > 0) {
   console.warn("");
 }
 
+// Espelho por cópia direta. Desde 2026-09-17 os `.glb` de criatura não
+// carregam mais KTX2 (o site não renderiza; o Godot escurecia a cor ao
+// decodificar ETC1S e comprime PNG/JPEG para VRAM sozinho na importação),
+// então o arquivo servido pelo site é byte a byte o que o jogo lê.
 for (const { src, dest } of modelCopies) {
   mkdirSync(dirname(dest), { recursive: true });
   copyFileSync(src, dest);

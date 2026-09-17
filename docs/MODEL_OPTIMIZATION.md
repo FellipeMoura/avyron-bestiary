@@ -1,153 +1,41 @@
-# Otimização de modelos 3D
+# Modelos 3D de criatura: contrato e preparo
 
-Como preparar um `.glb` do Meshy antes de servir no bestiário, e por que o processo é o que é.
+Como um corpo de criatura chega a `apps/web/public/models/`, o que `pnpm models:optimize` faz com ele, e por que o KTX2 saiu.
 
-**Resumo operacional:** jogue o arquivo em `apps/web/public/models/` e rode `pnpm models:optimize`. O script é idempotente — pula o que já está otimizado e processa só o novo. O resto deste documento explica as decisões, para que ninguém as desfaça por engano.
+**Resumo operacional:** o corpo é produzido pelo fluxo "base + casca" (`../mestre/README.md`, no diretório irmão `games/mestre/`) e entra por `pnpm models:publish -- --code CRT-XXX`, que grava `CRT-XXX.glb` aqui, roda o `models:optimize` e espelha no repo do jogo. Não há passo manual.
 
-> **`--dir <pasta>` trata um `.glb` que não é de criatura.** O corpo do jogador (`../avyron/models/player.glb`) sai do mesmo Meshy, com as mesmas texturas 2048², e é o único corpo SEMPRE em cena — precisa de KTX2 tanto quanto qualquer criatura. Mas não é conteúdo de catálogo: copiá-lo para `apps/web/public/models/` só para poder otimizá-lo deixaria um `.glb` sem `modelUrl` nenhum apontando pra ele numa pasta cujo contrato inteiro é `<CODE>.glb` 1:1 com criatura. `node scripts/optimize-models.mjs --dir ../avyron/models` aplica o mesmo tratamento onde o arquivo mora; os `.glb` de criatura espelhados ao lado dele já saem daqui em KTX2 e caem no `SKIP  already KTX2`.
+## O contrato do arquivo
 
-> **Placeholders não passam por aqui.** Os modelos em `apps/web/public/models/placeholders/` (packs CC0 do Quaternius, animados) são gerados por `pnpm models:placeholders` a partir de `placeholder_models/`, que converte glTF → `.glb`, normaliza os nomes dos clipes de animação para o vocabulário único e emite o `manifest.json` do seletor da ficha. KTX2 não compraria nada neles: a textura é um atlas de paleta de 9 KB (ou nenhuma). O `models:optimize` só varre a raiz de `models/`, então os dois pipelines não se tocam. Este documento vale integralmente para os `.glb` animados do Meshy AI — desde 2026-09 eles voltaram por este mesmo caminho: `scripts/convert-meshy.mjs` normaliza os clipes e escreve `<CODE>.glb` na raiz de `models/`, e o checklist abaixo (passo 2) é o mesmo, só que o nome do arquivo já sai pronto do conversor em vez de ser escolhido à mão.
+Um `.glb` por criatura, nome igual ao `code`, solto na raiz de `apps/web/public/models/`. O `syncModels` do bestiário liga o `modelUrl` pelo nome do arquivo. O que o arquivo carrega desde 2026-09-17:
 
----
+| | |
+|---|---|
+| Esqueleto | 55 ossos, nomes da UAL (`pelvis`, `spine_01`…), o mesmo da mestre |
+| Animação | nenhuma — o jogo dá a biblioteca UAL em runtime por retarget |
+| Malha | ~12k triângulos, T-pose, frente em +Z |
+| Texturas | cor, normal e metal/rugosidade, JPEG ou PNG, no máximo 2048² |
+| Material | PBR comum, sem emissivo |
 
-## A armadilha central: MB de arquivo não é o custo que importa
+O jogo recebe o arquivo **byte a byte** pelo `pnpm game:export`. Não existe mais formato de site e formato de jogo.
 
-A intuição natural é medir otimização pelo tamanho do `.glb`. Ela leva à conclusão errada em quase todos os passos aqui.
+## O que `models:optimize` faz
 
-Um modelo do Meshy sai com ~8 MB, dos quais **~98% é textura e ~2% é geometria**. Medido nos 9 primeiros:
+1. Recusa arquivo ainda em KTX2 (republicar da fonte resolve).
+2. Remove emissivo cujo pico é preto e zera o `emissiveFactor` junto. Em glTF o emissivo é fator × textura: tirar a textura deixando o fator em 1 acende o corpo inteiro em branco. O script se recusa a gravar se encontrar essa combinação.
+3. Reduz textura acima de 2048² para 2048².
+4. Valida que a geometria não mudou, e só então grava. Arquivo sem nada a mudar é `SKIP`. O original vai para `apps/web/.model-backups/` se ainda não houver um lá; republicação guarda o anterior como `<CODE>.prev.glb`.
 
-| | Geometria | Texturas | Total |
-|---|---|---|---|
-| CRT-009 (Meganeura, hoje CRT-069) | 0.20 MB | 8.73 MB | 8.93 MB |
-| CRT-001 | 0.19 MB | 7.23 MB | 7.42 MB |
+`--dry` lista sem gravar. `--dir <pasta>` trata outra pasta, não recursivo.
 
-Duas consequências que contrariam a intuição:
+## Por que o KTX2 saiu
 
-**1. Reduzir polígonos não faz diferença.** Ir de 4k para 3k triângulos mexe em ~60 KB — invisível no arquivo. E 3k triângulos não é carga para nenhuma GPU desta década. Contagem de polígonos não é o gargalo destes modelos e não vai ser.
+Ele entrou em 2026-08 porque o viewer three.js do site renderizava os corpos e a VRAM era o gargalo: JPEG e PNG só comprimem em disco, a GPU guarda o mapa cru, e KTX2/Basis fica comprimido na própria GPU. Isso continua verdade, mas as duas premissas caíram:
 
-**2. Reduzir a resolução da textura não aparece no arquivo, mas é a mudança que mais importa.** JPEG e PNG só comprimem em disco. Ao chegar na GPU, toda textura é decodificada para RGBA cru:
+- o site parou de renderizar modelo em 2026-09; o único consumidor é o Godot;
+- o Godot 4.7 decodifica o ETC1S com a cor escurecida e, ao mesmo tempo, comprime PNG e JPEG para VRAM sozinho na importação (`detect_3d/compress_to`).
 
-- 4096² × RGBA × 4 mapas + mipmaps ≈ **~358 MB de VRAM por criatura**
-- 2048² × RGBA × 4 mapas + mipmaps ≈ **~89 MB de VRAM por criatura**
+O resultado era codificar KTX2 aqui para decodificar de volta a PNG no espelho do jogo, com um decoder vendorizado do three.js no meio. Saíram o encoder, o decoder e o passo de espelho. A regra que sobrevive é a de resolução: **o tamanho do arquivo governa download; a resolução da textura governa VRAM**. Por isso o teto de 2048² continua, e reduzir mais é decisão de arte, não de engenharia.
 
-A troca de 4k para 2k economizou ~270 MB de VRAM por modelo sem mexer visivelmente no tamanho do `.glb`. Quem estivesse medindo por MB teria concluído que a mudança não fez nada.
+## O corpo do jogador
 
-**A regra:** o tamanho do arquivo governa o *download*; a resolução e o formato da textura governam a *VRAM*. São dois problemas distintos e exigem soluções distintas.
-
----
-
-## Por que KTX2, e não só recomprimir o JPEG
-
-Recomprimir os JPEGs em qualidade razoável funciona muito bem para download — e absolutamente nada para VRAM:
-
-| Abordagem | Download (9 modelos) | VRAM (9 modelos) |
-|---|---|---|
-| Original do Meshy | 70.62 MB | ~800 MB |
-| JPEG recomprimido q82–q92 | 18.65 MB | **580 MB** |
-| KTX2/Basis | 37.48 MB | **96.63 MB** |
-
-O JPEG recomprimido ganha no download e continua custando 580 MB de VRAM, porque o formato do arquivo não muda o que a GPU armazena. KTX2/Basis permanece comprimido *na própria GPU* — é a única opção que ataca o número de runtime.
-
-Note que o KTX2 tem arquivo **maior** que o JPEG recomprimido. Isso é esperado e é o trade certo: 21 MB a mais de download em troca de 484 MB a menos de VRAM.
-
----
-
-## As escolhas de codec, por slot
-
-O script usa **ETC1S** como padrão e **UASTC** só no normal map.
-
-- **ETC1S** transcodifica para BC1 (0.5 byte/px). Arquivo pequeno, VRAM pequena, perda aceitável em cor.
-- **UASTC** transcodifica para BC7 (1 byte/px). Arquivo grande, qualidade alta.
-
-Normal map é a exceção porque ETC1S o degrada de forma visível — blocagem e banding em superfícies lisas. Como o normal é justamente o que dá detalhe de superfície a criaturas de 3k tris, ele não pode ser o mapa sacrificado.
-
-Três configurações foram medidas no CRT-009 (Meganeura, hoje CRT-069) antes da escolha:
-
-| Configuração | Arquivo | VRAM | Normal |
-|---|---|---|---|
-| **UASTC 2048²** (escolhida) | 4.82 MB | 10.71 MB | máxima |
-| ETC1S 2048² | 2.22 MB | 8.05 MB | pior |
-| UASTC 1024² | 2.48 MB | 6.71 MB | alta, metade da resolução |
-
-A opção de 1024² vence nos dois números, e continua disponível se o download virar prioridade — é trocar `uastcLDRQualityLevel` por um resize no slot `normal` em `scripts/optimize-models.mjs`. Ficou de fora porque reduzir resolução é decisão de arte, não de engenharia.
-
----
-
-## Emissive: quase sempre lixo, mas confira antes de apagar
-
-O Meshy exporta um slot emissivo mesmo quando não há brilho nenhum na arte. Medido nos 9 primeiros modelos, o pico de brilho ficou entre 7 e 90 de 255 — nenhum chega perto de um brilho real.
-
-O script classifica cada mapa antes de agir:
-
-- **pico ≤ 8** → a textura é preta (ruído de compressão JPEG sobre uma imagem vazia). Removida.
-- **pico > 8** → há forma coerente, ainda que fraca. Reduzida para 256² (ou 512² se o pico passa de 32).
-
-Reduzir para 256² já corta 98% do custo de VRAM daquele mapa, então a diferença prática entre reduzir e remover é desprezível — e reduzir não corre o risco de apagar arte que existe.
-
-### A armadilha do emissiveFactor
-
-Em glTF o emissivo é `emissiveFactor × emissiveTexture`. **Remover a textura deixando o fator em `[1,1,1]` faz a superfície inteira brilhar branco sólido** — a criatura vira uma silhueta chapada.
-
-O script zera o fator junto com a remoção e se recusa a gravar o arquivo se encontrar um material sem textura emissiva e com fator diferente de zero. Se você mexer nesse trecho, mantenha a checagem.
-
-### Se você quiser brilho de verdade
-
-Não conte com o que o Meshy entrega. Um mapa emissivo correto é quase todo preto com poucas regiões muito claras (200+); o que vem do Meshy é o oposto — cinza-escuro fraco espalhado pelo corpo todo, correlacionado com o base color (r ≈ 0.3), que é a assinatura de um subproduto do gerador e não de direção de arte. Para brilho intencional, pinte um mapa pequeno (256² basta, luz é difusa) com valores altos nas regiões acesas.
-
----
-
-## Sobre a opção "gerar mapas PBR" do Meshy
-
-**Mantenha ligada.** Ela controla se você recebe o conjunto que descreve como a superfície reage à luz (metallic, roughness, normal) ou só a cor base. O normal map é o que sustenta a leitura de superfície em malhas de 3k tris — sem ele as criaturas viram plástico liso.
-
-PBR e emissive são coisas diferentes: PBR descreve como a superfície **responde** à luz que chega; emissive é a superfície **emitindo** luz própria. Apague todas as luzes da cena e tudo que é PBR fica preto; o que continuar aceso é emissive.
-
-Uma observação sobre o que vem empacotado: o glTF junta três mapas num arquivo só — occlusion no canal R, roughness no G, metallic no B. Nos 9 primeiros modelos o **canal de occlusion veio constante em 253–255 nos nove**, ou seja, zero informação, e o metallic ficou com média ~0.5 em oito deles. Na prática aquele arquivo de 2048² carrega um canal útil. Não é defeito do Meshy, é como o formato empacota — mas explica por que ele comprime tão bem e por que não vale investir qualidade nele.
-
----
-
-## O que o script faz, na ordem
-
-1. Varre `apps/web/public/models/*.glb`.
-2. Pula qualquer modelo cujas texturas já sejam `image/ktx2` (idempotência).
-3. Trata o emissive **antes** de codificar — não faz sentido gastar encode num mapa prestes a ser descartado.
-4. Codifica os mapas restantes para KTX2 com mipmaps completos.
-5. Marca `KHR_texture_basisu` como extensão obrigatória.
-6. **Valida antes de gravar**: contagem de triângulos e vértices idêntica à entrada, e nenhum material com `emissiveFactor` não-zero sem textura. Se falhar, não grava.
-7. Faz backup do original em `apps/web/.model-backups/` — **nunca sobrescrevendo um backup existente**.
-
-### Flags
-
-- `--dry` — mostra o que faria, sem gravar nada.
-- `--force` — reprocessa modelos já otimizados, **partindo do backup**, não do arquivo já comprimido. Recomprimir arte já comprimida empilha perda geracional; é por isso que a flag lê do backup.
-
----
-
-## Os backups são o ativo mais importante aqui
-
-`apps/web/.model-backups/` guarda os `.glb` originais do Meshy, é gitignorada (~90 MB) e **é a única fonte a partir da qual um reencode futuro pode partir sem empilhar perda**.
-
-Toda compressão com perda é destrutiva. Se amanhã você quiser trocar UASTC por ETC1S, ou 2048² por 1024², partir do arquivo já comprimido produz resultado pior que partir do original. Por isso o script nunca sobrescreve um backup existente e o `--force` lê de lá.
-
-Se essa pasta se perder, o caminho de volta é re-baixar do Meshy.
-
----
-
-## Quem carrega isto
-
-`KHR_texture_basisu` é marcada como **obrigatória**. Um importador glTF sem suporte a KTX2 não degrada — ele falha o carregamento.
-
-O único consumidor dos `.glb` hoje é o jogo em Godot, que importa KTX2/Basis nativamente. O bestiário **não renderiza mais modelo 3D** (o viewer three.js da ficha foi removido em 2026-09); ele só serve os arquivos em `apps/web/public/models/` e mantém o vínculo `modelUrl`, que o `pnpm game:export` espelha no repo do jogo.
-
----
-
-## Checklist para um modelo novo
-
-1. Exportar do Meshy com "gerar mapas PBR" ligado, textura 2048². **Animado:** baixe no formato de `.glb` único (malha + esqueleto + todos os clipes) — é a opção preferida; export multi-arquivo (um `.glb` por clipe) também funciona, mas é o caminho legado, mais lento e mais propenso a erro na hora de remover um clipe.
-2. **Estático:** salve como `CRT-XXX.glb` (sem sufixo de versão) direto em `apps/web/public/models/`. **Animado:** rode `pnpm models:meshy -- --source <arquivo ou pasta> --out apps/web/public/models/CRT-XXX.glb` primeiro — ele normaliza os nomes dos clipes pro vocabulário canônico (`Idle`/`Walk`/`Run`/`Attack`/`Attack2`/`Attack3`/`HitReact`/`Death`/`Swim`/`Swim_Idle`/`Dodge`) e já escreve no lugar certo.
-3. **Estático** (não passou pelo `models:meshy`): `pnpm models:materials` — o Meshy exporta metal puro (`metallicFactor` ausente = 1.0) com a própria textura de cor como emissivo; no jogo isso lê preto com brilho, e o passo do emissivo abaixo reduziria a textura de cor pra 512² junto. O `models:meshy` já faz essa normalização em corpo animado. Ver `scripts/fix-meshy-materials.mjs`. O elenco anterior a 2026-09-08 teve a cor reduzida a 512² por esse caminho; `pnpm models:materials -- --restore-textures` recupera a 2048² a partir do backup cru de `.model-backups/` — mais um motivo para essa pasta ser o ativo mais importante daqui.
-4. `pnpm models:optimize`
-5. Conferir a saída: geometria inalterada, redução de ~45–50% no arquivo.
-6. `pnpm game:export` e abrir a criatura no jogo para confirmar que renderiza.
-
-Se o modelo aparecer preto ou branco chapado, o suspeito número um é o `emissiveFactor` — ver a armadilha acima. Se aparecer escuro **com brilho**, dos dois lados, independente da luz, é `metallicFactor` 1.0 — o passo 3 acima.
+Não existe mais um `.glb` de jogador: desde 2026-09-17 ele é montado pelo kit de personagens (`apps/web/public/models/characters/`, `pnpm models:characters`), como os NPCs, a partir de uma receita fixa no jogo. O export Meshy anterior está em `../shared-assets/legacy/meshy-player/`.

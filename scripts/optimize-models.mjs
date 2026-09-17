@@ -3,87 +3,64 @@ import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import { NodeIO } from "@gltf-transform/core";
-import { KHRTextureBasisu, ALL_EXTENSIONS } from "@gltf-transform/extensions";
-import { encodeToKTX2 } from "ktx2-encoder";
+import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 
 /**
- * Compress creature .glb textures to KTX2/Basis and strip dead emissive maps.
+ * Normaliza um `.glb` de criatura antes de servir: teto de resolução de
+ * textura, emissivo morto fora, e nada de KTX2.
  *
- * Meshy exports 2048² JPEGs at near-maximum quality — ~8 MB per file, of which
- * ~98% is texture. Worse, JPEG only compresses on disk: the GPU decodes every
- * texture to raw RGBA, so an untouched model costs ~89 MB of VRAM regardless of
- * how small the .glb is. KTX2 stays compressed on the GPU, which is the only
- * change that actually moves the runtime number.
+ * ## O que mudou em 2026-09-17
  *
- * Run with `pnpm models:optimize` after dropping new .glb files into
- * apps/web/public/models. Idempotent: models already carrying KTX2 textures are
- * skipped, so re-running after adding one file only touches that file.
+ * Até aqui este script codificava toda textura para KTX2/Basis — a única
+ * mudança que fazia a VRAM cair enquanto o viewer three.js do site
+ * renderizava os corpos. O site parou de renderizar em 2026-09, e o único
+ * consumidor ficou sendo o Godot, que (a) escurece a cor decodificando
+ * ETC1S e (b) comprime PNG/JPEG para VRAM sozinho na importação
+ * (`detect_3d/compress_to`). Ou seja: o KTX2 era codificado aqui só para o
+ * espelho do jogo decodificá-lo de volta. Saiu, junto com o
+ * `ktx2-encoder`, o decoder vendorizado e o passo de "textura PNG para o
+ * Godot". O espelho agora é cópia direta do arquivo.
  *
- * Full rationale and measurements: docs/MODEL_OPTIMIZATION.md
+ * ## O que ainda vale a pena fazer aqui
+ *
+ * - **Teto de resolução** (`MAX_TEXTURE`, 2048²): o Tripo pode entregar
+ *   4096² (`texture_quality: extreme`), e um chibi a 10% da altura da tela
+ *   não usa nada disso. Redimensionar não muda o tamanho do `.glb` tanto
+ *   quanto muda a VRAM — JPEG só comprime em disco, a GPU guarda o mapa
+ *   descomprimido.
+ * - **Emissivo morto**: mapa emissivo cujo pico não passa de preto é ruído
+ *   de compressão sobre uma imagem vazia (herança do Meshy). Sai, e o
+ *   `emissiveFactor` vai a zero junto — em glTF o emissivo é fator ×
+ *   textura, e tirar a textura deixando o fator em 1 acende o corpo inteiro
+ *   em branco. O script se recusa a gravar se encontrar essa combinação.
+ * - **Idempotência**: arquivo sem nada a mudar sai como `SKIP`; só o que
+ *   muda é gravado, e o original vai para `.model-backups/` se ainda não
+ *   houver um lá.
+ *
+ * Roda com `pnpm models:optimize` (varre `apps/web/public/models/*.glb`) ou
+ * `--dir <pasta>` para outra pasta, não recursivo. `--dry` só lista.
  */
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..");
 
 const DRY = process.argv.includes("--dry");
-const FORCE = process.argv.includes("--force");
-
-/**
- * `--dir <pasta>` roda o mesmo tratamento numa pasta que não a de criaturas.
- *
- * Existe por causa do corpo do JOGADOR (`avyron/models/player.glb`): ele sai do
- * Meshy com as mesmas texturas 2048² de sempre — ~89 MB de VRAM sem KTX2, e
- * este é o único corpo que está SEMPRE em cena —, mas não é conteúdo de
- * catálogo. Copiá-lo para `apps/web/public/models/` só para poder otimizá-lo
- * deixaria um `.glb` sem `modelUrl` nenhum apontando pra ele numa pasta cujo
- * contrato inteiro é `<CODE>.glb` 1:1 com criatura. O tratamento é o mesmo; só
- * o endereço muda.
- *
- * A varredura não é recursiva, então apontar para `avyron/models/` pega o corpo
- * do jogador e os `.glb` de criatura espelhados ao lado dele — que já saem
- * daqui em KTX2 e caem no `SKIP  already KTX2`, exatamente como a
- * idempotência do script promete.
- */
+/** `--file <nome.glb>`: trata um arquivo só. É como `publish-shell.mjs`
+ * chama — o estado dos OUTROS corpos da pasta não pode abortar a publicação
+ * de um (foi assim que uma republicação em lote parou no primeiro corpo,
+ * com os demais ainda em KTX2). */
+const fileFlag = process.argv.indexOf("--file");
+const ONLY_FILE = fileFlag === -1 ? null : process.argv[fileFlag + 1];
 const dirFlag = process.argv.indexOf("--dir");
 const MODELS_DIR = dirFlag === -1
   ? resolve(repoRoot, "apps/web/public/models")
   : resolve(repoRoot, process.argv[dirFlag + 1] ?? "");
 const BACKUP_DIR = resolve(repoRoot, "apps/web/.model-backups");
 
-// An emissive map peaking at or below this is black: JPEG noise over a blank
-// image, contributing nothing but VRAM. Measured across the first 9 creatures,
-// real (if faint) glow peaked at 90 and noise never cleared 17.
+const MAX_TEXTURE = 2048;
+/** Pico (0–255) até onde um emissivo é considerado preto. Medido nos corpos
+ * Meshy de 2026-09: ruído nunca passou de 17, brilho real começava em 90. */
 const EMISSIVE_BLACK_PEAK = 8;
-const EMISSIVE_SIZE = 256;
-const EMISSIVE_SIZE_RICH = 512; // for maps that peak above 32
-
-/**
- * ETC1S transcodes to BC1 (0.5 byte/px) and is the right default. Normal maps
- * are the exception: ETC1S mangles them, so they get UASTC (BC7, 1 byte/px)
- * with Zstandard supercompression to keep the download sane.
- */
-const CODEC = {
-  baseColor: { isUASTC: false, qualityLevel: 220, compressionLevel: 4, isPerceptual: true, isSetKTX2SRGBTransferFunc: true },
-  emissive: { isUASTC: false, qualityLevel: 200, compressionLevel: 4, isPerceptual: true, isSetKTX2SRGBTransferFunc: true },
-  metallicRoughness: { isUASTC: false, qualityLevel: 235, compressionLevel: 5, isPerceptual: false, isSetKTX2SRGBTransferFunc: false },
-  occlusion: { isUASTC: false, qualityLevel: 235, compressionLevel: 5, isPerceptual: false, isSetKTX2SRGBTransferFunc: false },
-  normal: {
-    isUASTC: true,
-    uastcLDRQualityLevel: 2,
-    needSupercompression: true,
-    enableRDO: true,
-    rdoQualityLevel: 1.0,
-    isNormalMap: true,
-    isPerceptual: false,
-    isSetKTX2SRGBTransferFunc: false,
-  },
-};
-
-// Required in Node — the encoder has no browser ImageDecoder to fall back on.
-const imageDecoder = async (buffer) => {
-  const { data, info } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  return { data: new Uint8Array(data), width: info.width, height: info.height };
-};
 
 const mb = (n) => (n / 1024 / 1024).toFixed(2);
 
@@ -97,183 +74,115 @@ async function peakValue(buffer) {
   return max;
 }
 
-function texturesBySlot(root) {
-  const slots = new Map();
-  for (const material of root.listMaterials()) {
-    const pbr = [
-      ["baseColor", material.getBaseColorTexture()],
-      ["metallicRoughness", material.getMetallicRoughnessTexture()],
-      ["normal", material.getNormalTexture()],
-      ["emissive", material.getEmissiveTexture()],
-      ["occlusion", material.getOcclusionTexture()],
-    ];
-    for (const [slot, texture] of pbr) if (texture && !slots.has(texture)) slots.set(texture, slot);
-  }
-  return slots;
-}
-
 function countGeometry(root) {
-  let tris = 0;
-  let verts = 0;
-  for (const mesh of root.listMeshes()) {
-    for (const prim of mesh.listPrimitives()) {
-      const position = prim.getAttribute("POSITION");
-      const indices = prim.getIndices();
-      verts += position.getCount();
-      tris += indices ? indices.getCount() / 3 : position.getCount() / 3;
-    }
+  let tris = 0, verts = 0;
+  for (const mesh of root.listMeshes()) for (const prim of mesh.listPrimitives()) {
+    const position = prim.getAttribute("POSITION");
+    const indices = prim.getIndices();
+    verts += position.getCount();
+    tris += indices ? indices.getCount() / 3 : position.getCount() / 3;
   }
   return { tris, verts };
 }
 
-const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
-
-if (!existsSync(MODELS_DIR)) {
-  console.error(`models dir not found: ${MODELS_DIR}`);
-  process.exit(1);
-}
-
-const files = readdirSync(MODELS_DIR)
-  .filter((f) => f.toLowerCase().endsWith(".glb"))
-  .sort();
-
-if (files.length === 0) {
-  console.log("no .glb files found — nothing to do");
-  process.exit(0);
-}
-
-let processed = 0;
-let skipped = 0;
-let failed = 0;
-let totalBefore = 0;
-let totalAfter = 0;
-
-for (const file of files) {
+async function processFile(io, file) {
   const modelPath = join(MODELS_DIR, file);
-  const backupPath = join(BACKUP_DIR, file);
-
-  // --force re-runs from the pristine backup rather than re-compressing
-  // already-compressed art, which would stack generation loss.
-  const sourcePath = FORCE && existsSync(backupPath) ? backupPath : modelPath;
-
-  let doc;
-  try {
-    doc = await io.read(sourcePath);
-  } catch (error) {
-    console.log(`  ${file.padEnd(14)} FAIL  unreadable: ${error.message}`);
-    failed += 1;
-    continue;
-  }
-
+  const before = statSync(modelPath).size;
+  const doc = await io.read(modelPath);
   const root = doc.getRoot();
-  const slots = texturesBySlot(root);
+  const geomBefore = countGeometry(root);
+  const changes = [];
 
-  const alreadyKtx2 = [...slots.keys()].every((t) => t.getMimeType() === "image/ktx2");
-  if (alreadyKtx2 && !FORCE) {
-    console.log(`  ${file.padEnd(14)} SKIP  already KTX2`);
-    skipped += 1;
-    continue;
+  // KTX2 não é mais servido: o Godot escurece a cor ao decodificar. Um
+  // arquivo que ainda esteja assim precisa ser republicado da fonte
+  // (`pnpm models:publish -- --code <CODE>`), não "convertido de volta".
+  if (root.listTextures().some((t) => t.getMimeType() === "image/ktx2")) {
+    console.log(`  ${file.padEnd(14)} FAIL  ainda em KTX2 — republique da fonte (models:publish)`);
+    return false;
   }
 
-  const beforeBytes = statSync(sourcePath).size;
-  const geometryBefore = countGeometry(root);
-  const detail = [];
-
-  // ---- emissive first: no point encoding a map that is about to be dropped ----
+  // emissivo morto
   for (const material of root.listMaterials()) {
-    const texture = material.getEmissiveTexture();
-    if (!texture || texture.getMimeType() === "image/ktx2") continue;
-
-    const peak = await peakValue(texture.getImage());
-    const before = texture.getImage().byteLength;
-
+    const tex = material.getEmissiveTexture();
+    if (!tex) continue;
+    const peak = await peakValue(Buffer.from(tex.getImage()));
     if (peak <= EMISSIVE_BLACK_PEAK) {
-      material.setEmissiveTexture(null);
-      // CRITICO: em glTF o emissivo e emissiveFactor * emissiveTexture. Remover
-      // a textura deixando o fator em [1,1,1] faz a superficie inteira brilhar
-      // branco solido. O fator tem de ser zerado junto.
-      material.setEmissiveFactor([0, 0, 0]);
-      slots.delete(texture);
-      detail.push([`emissive`, before, 0, `removido (pico ${peak}/255 = preto)`]);
-    } else {
-      const target = peak > 32 ? EMISSIVE_SIZE_RICH : EMISSIVE_SIZE;
-      const resized = await sharp(texture.getImage()).resize(target, target, { fit: "fill" }).jpeg({ quality: 88 }).toBuffer();
-      texture.setImage(new Uint8Array(resized)).setMimeType("image/jpeg");
-      detail.push([`emissive`, before, resized.length, `reduzido para ${target}² (pico ${peak})`]);
+      material.setEmissiveTexture(null).setEmissiveFactor([0, 0, 0]);
+      if (tex.listParents().length <= 1) tex.dispose();
+      changes.push(`emissivo removido (pico ${peak}/255)`);
     }
   }
 
-  // ---- everything else to KTX2 ----
-  for (const [texture, slot] of slots) {
-    const image = texture.getImage();
-    if (!image || texture.getMimeType() === "image/ktx2") continue;
-
-    const before = image.byteLength;
-    const meta = await sharp(image).metadata();
-    const options = CODEC[slot] ?? CODEC.metallicRoughness;
-
-    const encoded = await encodeToKTX2(image, {
-      ...options,
-      generateMipmap: true,
-      isKTX2File: true,
-      imageDecoder,
-    });
-    texture.setImage(encoded).setMimeType("image/ktx2");
-    detail.push([slot, before, encoded.byteLength, `${options.isUASTC ? "UASTC" : "ETC1S"} ${meta.width}×${meta.height}`]);
+  // teto de resolução
+  for (const tex of root.listTextures()) {
+    const size = tex.getSize();
+    if (!size || Math.max(...size) <= MAX_TEXTURE) continue;
+    const mime = tex.getMimeType();
+    const buf = Buffer.from(tex.getImage());
+    let pipeline = sharp(buf).resize(MAX_TEXTURE, MAX_TEXTURE, { fit: "inside" });
+    pipeline = mime === "image/jpeg" ? pipeline.jpeg({ quality: 92 }) : pipeline.png();
+    tex.setImage(await pipeline.toBuffer());
+    changes.push(`${tex.getName() || mime} ${size.join("×")} → ≤${MAX_TEXTURE}²`);
   }
 
-  doc.createExtension(KHRTextureBasisu).setRequired(true);
-
-  // ---- validate before touching disk ----
-  const geometryAfter = countGeometry(root);
-  if (geometryBefore.tris !== geometryAfter.tris || geometryBefore.verts !== geometryAfter.verts) {
-    console.log(`  ${file.padEnd(14)} FAIL  geometry changed — not written`);
-    failed += 1;
-    continue;
+  if (changes.length === 0) {
+    console.log(`  ${file.padEnd(14)} SKIP  nada a mudar`);
+    return true;
   }
-  const unsafeEmissive = root
-    .listMaterials()
-    .some((m) => !m.getEmissiveTexture() && Math.max(...m.getEmissiveFactor()) > 0);
-  if (unsafeEmissive) {
-    console.log(`  ${file.padEnd(14)} FAIL  emissiveFactor non-zero without a texture — not written`);
-    failed += 1;
-    continue;
+
+  // validação antes de gravar
+  const geomAfter = countGeometry(root);
+  if (geomAfter.tris !== geomBefore.tris || geomAfter.verts !== geomBefore.verts) {
+    console.log(`  ${file.padEnd(14)} FAIL  geometria mudou — não gravado`);
+    return false;
+  }
+  for (const material of root.listMaterials()) {
+    if (!material.getEmissiveTexture() && material.getEmissiveFactor().some((v) => v > 0)) {
+      console.log(`  ${file.padEnd(14)} FAIL  emissiveFactor sem textura — não gravado`);
+      return false;
+    }
   }
 
   if (DRY) {
-    const projected = detail.reduce((sum, [, , after]) => sum + after, 0);
-    console.log(`  ${file.padEnd(14)} DRY   ${mb(beforeBytes)} MB → ~${mb(projected)} MB of texture`);
-    for (const [slot, before, after, note] of detail) {
-      console.log(`      ${slot.padEnd(18)} ${mb(before).padStart(5)} → ${mb(after).padStart(5)} MB   ${note}`);
-    }
-    processed += 1;
-    continue;
+    console.log(`  ${file.padEnd(14)} DRY   ${changes.join("; ")}`);
+    return true;
   }
-
-  // The pristine original is worth more than any re-derived file: it is the only
-  // source a future re-encode can start from without stacking generation loss.
-  // Never overwrite one that already exists.
   mkdirSync(BACKUP_DIR, { recursive: true });
+  const backupPath = join(BACKUP_DIR, file);
   if (!existsSync(backupPath)) copyFileSync(modelPath, backupPath);
-
   await io.write(modelPath, doc);
-  const afterBytes = statSync(modelPath).size;
+  const after = statSync(modelPath).size;
+  console.log(`  ${file.padEnd(14)} OK    ${mb(before)} MB → ${mb(after)} MB  ${changes.join("; ")}`);
+  return true;
+}
 
-  totalBefore += beforeBytes;
-  totalAfter += afterBytes;
-  processed += 1;
-
-  console.log(`  ${file.padEnd(14)} OK    ${mb(beforeBytes)} MB → ${mb(afterBytes)} MB  (-${(100 - (afterBytes / beforeBytes) * 100).toFixed(0)}%)`);
-  for (const [slot, before, after, note] of detail) {
-    console.log(`      ${slot.padEnd(18)} ${mb(before).padStart(5)} → ${mb(after).padStart(5)} MB   ${note}`);
+async function main() {
+  if (!existsSync(MODELS_DIR)) {
+    console.error(`pasta não encontrada: ${MODELS_DIR}`);
+    process.exit(1);
   }
+  const files = readdirSync(MODELS_DIR)
+    .filter((f) => f.toLowerCase().endsWith(".glb"))
+    .filter((f) => !ONLY_FILE || f === ONLY_FILE)
+    .sort();
+  if (files.length === 0) {
+    console.log(`nenhum .glb em ${MODELS_DIR}`);
+    return;
+  }
+  const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
+  let failed = 0;
+  for (const file of files) {
+    try {
+      if (!(await processFile(io, file))) failed++;
+    } catch (err) {
+      failed++;
+      console.log(`  ${file.padEnd(14)} FAIL  ${err.message ?? err}`);
+    }
+  }
+  if (failed > 0) process.exit(1);
 }
 
-console.log(
-  `\ndone: ${processed} processed, ${skipped} already optimized, ${failed} failed` +
-    (totalBefore > 0 ? ` — ${mb(totalBefore)} MB → ${mb(totalAfter)} MB` : ""),
-);
-if (!DRY && processed > 0) {
-  console.log("originals backed up to apps/web/.model-backups/ (gitignored)");
-}
-process.exit(failed > 0 ? 1 : 0);
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
