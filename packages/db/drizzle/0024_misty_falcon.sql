@@ -1,0 +1,2 @@
+CREATE TYPE "public"."ability_attack_variant" AS ENUM('attack', 'attack2', 'attack3');--> statement-breakpoint
+ALTER TABLE "ability_stats" ADD COLUMN "attack_variant" "ability_attack_variant" DEFAULT 'attack' NOT NULL;

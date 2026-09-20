@@ -722,6 +722,7 @@ const outAbilities = abilities.map((a) => {
     effectCode: s?.effectCode ?? "damage",
     effectValue: s?.effectValue ?? 0,
     targetSelf: s?.targetSelf ?? false,
+    attackVariant: s?.attackVariant ?? "attack",
   };
 });
 
@@ -839,10 +840,16 @@ const outCreatures = await Promise.all(creatures.map(async (c) => {
   }
   if (moves.length === 0) problems.push(`creature ${c.code} (${c.originalName}) knows no abilities`);
 
-  // PZ-01 é o primeiro elenco a seguir o esquema padronizado de 3 golpes: 1
-  // básico (damage, não-awakening), 1 buff (buff_attack/buff_defense) e 1
-  // elemental exclusivo do Despertar Ancestral (awakeningOnly). O resto do
-  // elenco ainda segue o padrão antigo (5-6 golpes) até decisão de estender.
+  // PZ-01 é o primeiro elenco a seguir o esquema padronizado: 1 buff
+  // (buff_attack/buff_defense) e 1 elemental exclusivo do Despertar Ancestral
+  // (awakeningOnly), sempre. Golpes de dano fora do Despertar (`basic`)
+  // eram 1 até 2026-09 — só o elemental da própria criatura; passaram a 2
+  // quando o primeiro slot ganhou o básico genérico da CLASSE (Bote/Pancada/
+  // Investida/Golpe Direto/Corte Rápido, sempre sem elemento) e o elemental
+  // que ocupava aquele posto deixou de ser substituído, só empurrado — as
+  // duas contam como "basic" porque a distinção é `effectCode === "damage"`,
+  // não a origem do golpe. O resto do elenco ainda segue o padrão antigo
+  // (5-6 golpes) até decisão de estender.
   if (code(mapById, c.mapId) === "PZ-01") {
     const roles = moves.map((m) => {
       const ability = abilityById.get(m.abilityId);
@@ -855,10 +862,10 @@ const outCreatures = await Promise.all(creatures.map(async (c) => {
     const basicCount = roles.filter((r) => r === "basic").length;
     const buffCount = roles.filter((r) => r === "buff").length;
     const awakeningCount = roles.filter((r) => r === "awakening").length;
-    if (moves.length !== 3 || basicCount !== 1 || buffCount !== 1 || awakeningCount !== 1) {
+    if (moves.length !== 4 || basicCount !== 2 || buffCount !== 1 || awakeningCount !== 1) {
       problems.push(
-        `creature ${c.code} (${c.originalName}) is on PZ-01 and must have exactly 3 abilities `
-          + `(1 basic damage, 1 buff, 1 awakening-only) — found ${moves.length}: ${roles.join(", ") || "none"}`,
+        `creature ${c.code} (${c.originalName}) is on PZ-01 and must have exactly 4 abilities `
+          + `(2 basic damage, 1 buff, 1 awakening-only) — found ${moves.length}: ${roles.join(", ") || "none"}`,
       );
     }
   }

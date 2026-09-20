@@ -264,6 +264,17 @@ export function useCreatureAbilityLinks(creatureCode: string | undefined) {
   });
 }
 
+/** Sem filtro — a tabela inteira, pra agrupar por habilidade em vez de por criatura. */
+export function useAllCreatureAbilityLinks() {
+  return useQuery({
+    queryKey: ["creature-abilities", "list"],
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/creature-abilities", { params: { query: { limit: 500, offset: 0 } } }),
+      ),
+  });
+}
+
 export function useDrops(creatureCode: string | undefined) {
   return useQuery({
     queryKey: ["drops", "by-creature", creatureCode],

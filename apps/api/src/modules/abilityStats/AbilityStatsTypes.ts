@@ -17,6 +17,12 @@ export const ABILITY_EFFECTS = [
   "charge_gain",
 ] as const;
 
+/**
+ * Which body clip a damaging/missing ability plays in Godot — see
+ * `abilityAttackVariantEnum` in `packages/db/src/schema/enums.ts`.
+ */
+export const ABILITY_ATTACK_VARIANTS = ["attack", "attack2", "attack3"] as const;
+
 export const AbilityStatSchema = z
   .object({
     id: z.number().int(),
@@ -28,6 +34,7 @@ export const AbilityStatSchema = z
     effectCode: z.enum(ABILITY_EFFECTS),
     effectValue: z.number().int(),
     targetSelf: z.boolean(),
+    attackVariant: z.enum(ABILITY_ATTACK_VARIANTS),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
   })
@@ -35,11 +42,11 @@ export const AbilityStatSchema = z
 
 export const ABILITY_STAT_FIELDS = [
   "id", "abilityId", "power", "accuracy", "uses", "priority",
-  "effectCode", "effectValue", "targetSelf", "createdAt", "updatedAt",
+  "effectCode", "effectValue", "targetSelf", "attackVariant", "createdAt", "updatedAt",
 ] as const;
 
 export const ABILITY_STAT_PAYLOAD = [
-  "power", "accuracy", "uses", "priority", "effectCode", "effectValue", "targetSelf",
+  "power", "accuracy", "uses", "priority", "effectCode", "effectValue", "targetSelf", "attackVariant",
 ] as const;
 
 export const ListAbilityStatsQuerySchema = paginationSchema.extend({
@@ -66,6 +73,7 @@ const coreSchema = z.object({
   effectCode: z.enum(ABILITY_EFFECTS).optional().openapi({ example: "damage" }),
   effectValue: z.number().int().min(0).max(100).optional().openapi({ example: 0 }),
   targetSelf: z.boolean().optional().openapi({ example: false }),
+  attackVariant: z.enum(ABILITY_ATTACK_VARIANTS).optional().openapi({ example: "attack" }),
 });
 
 export const UpsertAbilityStatBodySchema = coreSchema

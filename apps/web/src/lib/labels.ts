@@ -156,6 +156,34 @@ export const ABILITY_EFFECT_LABEL: Record<AbilityEffect, string> = {
   charge_gain: "ganho de carga",
 };
 
+/** Qual clipe de corpo o golpe toca em jogo ao causar dano/errar — ver `ability_stats.attack_variant`. */
+export type AttackVariant = "attack" | "attack2" | "attack3";
+
+export const ATTACK_VARIANT_LABEL: Record<AttackVariant, string> = {
+  attack: "Attack",
+  attack2: "Attack2 · Sword_Dash",
+  attack3: "Attack3 · combo de Cast",
+};
+
+/**
+ * O papel de uma habilidade em combate — mesma classificação de
+ * `export-game-data.mjs`/`test_data.gd` (o esquema de golpes do PZ-01):
+ * `despertar` vence tudo (awakeningOnly), depois `effectCode`. `basico` e
+ * `elemental` são as duas faces de `damage` — a única diferença é ter
+ * elemento ou não (o básico de classe não tem). `outro` cobre debuff/heal/
+ * charge_gain, que não fazem parte do esquema de 4 golpes do PZ-01 mas
+ * existem no catálogo mais amplo.
+ */
+export type AbilityRole = "basico" | "elemental" | "buff" | "despertar" | "outro";
+
+export const ABILITY_ROLE_LABEL: Record<AbilityRole, string> = {
+  basico: "Básico",
+  elemental: "Elemental",
+  buff: "Buff",
+  despertar: "Despertar",
+  outro: "Outro",
+};
+
 /**
  * O papel de trabalho da classe na mineração, vindo do JSON de
  * `creature_classes.workFunction`. São cinco tokens em inglês no banco porque

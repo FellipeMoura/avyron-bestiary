@@ -1,6 +1,6 @@
 import { boolean, check, integer, pgTable, real, serial, text, unique } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { abilityEffectEnum, itemEffectEnum } from "./enums";
+import { abilityAttackVariantEnum, abilityEffectEnum, itemEffectEnum } from "./enums";
 import { abilities, items } from "./gameplay";
 import { creatures } from "./creatures";
 import { timestamps } from "./timestamps";
@@ -138,6 +138,7 @@ export const abilityStats = pgTable(
     /** Magnitude of the effect: percent for buffs/debuffs, flat for heal/charge. */
     effectValue: integer("effect_value").notNull().default(0),
     targetSelf: boolean("target_self").notNull().default(false),
+    attackVariant: abilityAttackVariantEnum("attack_variant").notNull().default("attack"),
     ...timestamps,
   },
   (t) => ({

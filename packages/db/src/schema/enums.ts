@@ -19,6 +19,18 @@ export const abilityEffectEnum = pgEnum("ability_effect", [
 ]);
 
 /**
+ * Which body clip a damaging/missing ability plays in Godot — `attack` is
+ * the plain swing, `attack2`/`attack3` are the flashier variants
+ * (`Sword_Dash`, and a three-clip cast combo). Unrelated to `effectCode`:
+ * this picks the ANIMATION, not the mechanical effect.
+ */
+export const abilityAttackVariantEnum = pgEnum("ability_attack_variant", [
+  "attack",
+  "attack2",
+  "attack3",
+]);
+
+/**
  * What an item *is*. Was free text, which the export could not filter on —
  * `mining.items` took every row in the table, so the first non-mineral item
  * added would have been exported as minable ore.

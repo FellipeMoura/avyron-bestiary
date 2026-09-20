@@ -169,6 +169,13 @@
       "when": 1788820088979,
       "tag": "0023_despertar_buff_global",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1789747687773,
+      "tag": "0024_misty_falcon",
+      "breakpoints": true
     }
   ]
 }

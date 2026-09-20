@@ -38,44 +38,48 @@ const OUT_DIR = resolve(repoRoot, "apps/web/public/models/biomes/megakit");
 
 const MAX_TEXTURE_SIZE = 1024;
 
-if (!existsSync(SOURCE_DIR)) {
-  console.error(`source dir not found: ${SOURCE_DIR}`);
-  process.exit(1);
-}
-
-mkdirSync(OUT_DIR, { recursive: true });
-
-const files = readdirSync(SOURCE_DIR).sort();
 const mb = (n) => (n / 1024 / 1024).toFixed(1);
 
-let models = 0;
-let texBefore = 0;
-let texAfter = 0;
+if (!existsSync(SOURCE_DIR)) {
+  // Fonte é local e transitória (nunca versionada) — já foi consumida e
+  // descartada depois de uma conversão anterior. Pular em vez de abortar é o
+  // que deixa o script reentrante para os blocos seguintes (aquático/mar
+  // raso/recife), que têm a mesma guarda.
+  console.log(`megakit: source dir não encontrado (${SOURCE_DIR}), pulando`);
+} else {
+  mkdirSync(OUT_DIR, { recursive: true });
 
-for (const file of files) {
-  const src = join(SOURCE_DIR, file);
-  const dest = join(OUT_DIR, file);
-  const ext = extname(file).toLowerCase();
+  const files = readdirSync(SOURCE_DIR).sort();
 
-  if (ext === ".gltf" || ext === ".bin") {
-    copyFileSync(src, dest);
-    if (ext === ".gltf") models += 1;
-  } else if (ext === ".png") {
-    const input = readFileSync(src);
-    const out = await sharp(input)
-      .resize(MAX_TEXTURE_SIZE, MAX_TEXTURE_SIZE, { fit: "inside", withoutEnlargement: true })
-      .png({ compressionLevel: 9 })
-      .toBuffer();
-    writeFileSync(dest, out);
-    texBefore += input.byteLength;
-    texAfter += out.byteLength;
-    console.log(`  ${file.padEnd(32)} ${mb(input.byteLength).padStart(5)} MB → ${mb(out.byteLength).padStart(5)} MB`);
+  let models = 0;
+  let texBefore = 0;
+  let texAfter = 0;
+
+  for (const file of files) {
+    const src = join(SOURCE_DIR, file);
+    const dest = join(OUT_DIR, file);
+    const ext = extname(file).toLowerCase();
+
+    if (ext === ".gltf" || ext === ".bin") {
+      copyFileSync(src, dest);
+      if (ext === ".gltf") models += 1;
+    } else if (ext === ".png") {
+      const input = readFileSync(src);
+      const out = await sharp(input)
+        .resize(MAX_TEXTURE_SIZE, MAX_TEXTURE_SIZE, { fit: "inside", withoutEnlargement: true })
+        .png({ compressionLevel: 9 })
+        .toBuffer();
+      writeFileSync(dest, out);
+      texBefore += input.byteLength;
+      texAfter += out.byteLength;
+      console.log(`  ${file.padEnd(32)} ${mb(input.byteLength).padStart(5)} MB → ${mb(out.byteLength).padStart(5)} MB`);
+    }
   }
-}
 
-console.log(
-  `\ndone: ${models} modelos, texturas ${mb(texBefore)} MB → ${mb(texAfter)} MB, em ${OUT_DIR}`,
-);
+  console.log(
+    `\ndone: ${models} modelos, texturas ${mb(texBefore)} MB → ${mb(texAfter)} MB, em ${OUT_DIR}`,
+  );
+}
 
 // ---------------------------------------------------------------------------
 // aquáticos (Meshy) — props do PZ-01
@@ -92,16 +96,11 @@ console.log(
  * A geometria chega normalizada em ~1×1×1 pelo Meshy; a escala real de cada
  * prop é decisão da cena no Godot, não daqui.
  */
-const AQUA_SRC = resolve(repoRoot, "placeholder_models/biomes/aquaticos-meshy");
-const AQUA_OUT = resolve(repoRoot, "apps/web/public/models/biomes/aquatic");
 const EMISSIVE_BLACK_PEAK = 8;
 
-/** O único arquivo do lote que o Meshy exportou sem nome no meio. */
-const AQUA_RENAME = { "Meshy_AI__0824195641_texture": "Reef_Cluster" };
-
-function cleanAquaName(file) {
+function cleanMeshyName(file, renameMap) {
   const base = basename(file, ".glb");
-  if (AQUA_RENAME[base]) return AQUA_RENAME[base];
+  if (renameMap[base]) return renameMap[base];
   return base.replace(/^Meshy_AI_/, "").replace(/_\d+_texture$/, "");
 }
 
@@ -116,14 +115,28 @@ async function texturePeak(buffer) {
   return max;
 }
 
-if (existsSync(AQUA_SRC)) {
-  mkdirSync(AQUA_OUT, { recursive: true });
+/**
+ * Processa um lote de `.glb` do Meshy (textura própria por peça, sem atlas a
+ * preservar): downscale de textura, e o emissivo passa pela mesma checagem
+ * do `optimize-models.mjs` — remover a textura exige zerar o
+ * `emissiveFactor` junto, senão o prop vira silhueta branca chapada.
+ *
+ * `outDir` não é limpo antes de escrever — dois lotes podem apontar para o
+ * mesmo diretório de saída (recife original + peças novas do mesmo bioma),
+ * e o pipeline deve somar, não substituir.
+ */
+async function processMeshyKit(label, srcDir, outDir, renameMap = {}) {
+  if (!existsSync(srcDir)) {
+    console.log(`${label}: source dir não encontrado (${srcDir}), pulando`);
+    return 0;
+  }
+  mkdirSync(outDir, { recursive: true });
   const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
-  let aquaModels = 0;
+  let count = 0;
 
-  console.log("\naquáticos (Meshy):");
-  for (const file of readdirSync(AQUA_SRC).filter((f) => f.endsWith(".glb")).sort()) {
-    const doc = await io.read(join(AQUA_SRC, file));
+  console.log(`\n${label} (Meshy):`);
+  for (const file of readdirSync(srcDir).filter((f) => f.endsWith(".glb")).sort()) {
+    const doc = await io.read(join(srcDir, file));
     const root = doc.getRoot();
     const notes = [];
 
@@ -160,10 +173,42 @@ if (existsSync(AQUA_SRC)) {
       continue;
     }
 
-    const name = cleanAquaName(file);
-    await io.write(join(AQUA_OUT, `${name}.glb`), doc);
-    aquaModels += 1;
+    const name = cleanMeshyName(file, renameMap);
+    await io.write(join(outDir, `${name}.glb`), doc);
+    count += 1;
     console.log(`  ${name.padEnd(24)} ok${notes.length ? "  (" + notes.join("; ") + ")" : ""}`);
   }
-  console.log(`aquáticos: ${aquaModels} modelos em ${AQUA_OUT}`);
+  console.log(`${label}: ${count} modelos em ${outDir}`);
+  return count;
 }
+
+const mapAssetsBiomes = resolve(repoRoot, "../shared/map-assets/biomes");
+
+/** O único arquivo do lote original que o Meshy exportou sem nome no meio. */
+const AQUA_RENAME = { "Meshy_AI__0824195641_texture": "Reef_Cluster" };
+
+await processMeshyKit(
+  "aquáticos",
+  resolve(repoRoot, "placeholder_models/biomes/aquaticos-meshy"),
+  resolve(repoRoot, "apps/web/public/models/biomes/aquatic"),
+  AQUA_RENAME,
+);
+
+// Mar raso ganhou kit próprio (2026-09-18): usava o mesmo acervo do recife
+// e por isso os dois biomas se confundiam (ver BIOME_PROPS.md §4). Fonte em
+// `shared/map-assets/biomes/mar-raso/` — biblioteca de origem compartilhada
+// entre projetos, fora do `placeholder_models` deste repo.
+await processMeshyKit(
+  "mar raso",
+  join(mapAssetsBiomes, "mar-raso"),
+  resolve(repoRoot, "apps/web/public/models/biomes/mar-raso"),
+);
+
+// Peças novas do recife somam ao kit `aquatic` existente (mesmo diretório de
+// saída do lote original acima) — o recife continua sendo o dono do kit
+// aquático, agora sem o mar raso disputando as mesmas peças.
+await processMeshyKit(
+  "jardins recifais (adição)",
+  join(mapAssetsBiomes, "jardins-recifais"),
+  resolve(repoRoot, "apps/web/public/models/biomes/aquatic"),
+);

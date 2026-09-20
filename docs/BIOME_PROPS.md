@@ -29,14 +29,16 @@ Estas não são preferências. São o que `scripts/world/map_dressing.gd` faz co
 
 ## 2. O que já existe, e o que ele não cobre
 
-**`models/biomes/aquatic/`** — 11 peças geradas no Meshy, `.glb` individuais, normalizadas em ~1×1×1. Todas em uso hoje, e todas do mesmo registro: recife tropical turquesa.
+**`models/biomes/aquatic/`** — 16 peças geradas no Meshy, `.glb` individuais, normalizadas em ~1×1×1. Kit do recife (Jardins Recifais, BIO-003): coral tropical turquesa.
 
-`Aqua_Bloom_Grove` · `Aqua_Coral_Garden` · `Aqua_Sponge_Cluster` · `Coralstone_Arch` · `Emerald_Seaweed_Grove` · `Jade_Reef_Garden` · `Pastel_Tidepool_Treas` · `Reef_Cluster` · `Seafoam_Pipe_Coral` · `Terraced_Stone_Mounds` · `Turquoise_Reef_Stone`
+`Aqua_Bloom_Grove` · `Aqua_Coral_Garden` · `Aqua_Sponge_Cluster` · `Azure_Coral_Horn` · `Blue_Porous_Bowl` · `Coralstone_Arch` · `Emerald_Seaweed_Grove` · `Jade_Reef_Garden` · `Pastel_Tidepool_Treas` · `Pink_Coral_Spire` · `Reef_Cluster` · `Seafoam_Pipe_Coral` · `Spiky_Orange_Spheres` · `Terraced_Stone_Mounds` · `Turquoise_Reef_Stone` · `Verdant_Root_Chalice`
 
 Duas observações que valem para o planejamento:
 
 - **`Terraced_Stone_Mounds` é a única que lê como ROCHA** em vez de coral. É por isso que ela é a peça usada nas duas pedras do topo da ilha — um coral de pé em terra seca contradiz a ilha inteira, e a primeira captura da ilha mostrou exatamente isso.
 - **`Pastel_Tidepool_Treas` é a única com leitura de poça de maré**, que é vocabulário de costa, não de recife.
+
+**`models/biomes/mar-raso/`** — kit próprio desde 2026-09-18, separado do recife (a §4 abaixo já registrava a confusão de ler os dois biomas com o mesmo acervo). 5 peças: `Cratered_Sand_Mound` · `Floating_Highlands` · `Sandy_Furrows` · `Stone_Plateau_Sands` · `Terraced_Sandstone_Mo`. Fonte em `shared/map-assets/biomes/mar-raso/` (biblioteca compartilhada entre projetos); processado por `pnpm models:biomes`.
 
 **`models/biomes/megakit/`** — Stylized Nature MegaKit (Quaternius, CC0), preparado por `pnpm models:biomes`. É vegetação terrestre em escala real, reservada para PZ-02/PZ-03. Não serve o PZ-01.
 
@@ -59,7 +61,9 @@ A densidade **não** é uniforme, e essa é a decisão de design mais importante
 
 A densidade-base é ~1 prop a cada 91 m², calibrada para o total a 120 m ficar perto dos 132 de hoje. A coluna de 175 m é a mesma conta na área do mapa atual — está aqui porque decisões técnicas tomadas agora (§5) só fazem sentido contra ela. Até 2026-09-16 essa coluna era de 350 m (~1.280 props); o PZ-01 caiu então para 175 m de lado, ¼ da área, e os números acima são a mesma densidade na área nova, não um orçamento recalibrado.
 
-**A costa em ×0,15 não é descuido.** Ela é o adro da vila: comerciante, posto do Relicário e portais. Cenário lá não pode esconder um serviço, e o `MapDressing` hoje simplesmente não espalha nada na costa. As três peças do orçamento são para a borda d'água, longe dos pontos de interação.
+**A costa em ×0,15 não é descuido.** Ela é o adro da vila: comerciante, posto do Relicário e portais. Cenário lá não pode esconder um serviço, e por isso o `MapDressing` não espalhava nada na costa. As três peças do orçamento são para a borda d'água, longe dos pontos de interação.
+
+> **Revisto em 2026-09-17:** a costa passou a receber **22 matacões** na linha da água e **90 seixos** no platô (`Rock_Medium_*` e `Pebble_*` do MegaKit — pedra não é vegetação, então a regra de época continua respeitada). Isso rompe o ×0,15 de propósito, e o motivo é uma leitura que este orçamento não media: **chão liso sem nada cruzando o plano lê como PISO**, por boa que a textura seja — foi o que as capturas da costa em camadas mostraram. Seixo é detalhe de chão, não marco: não tapa serviço, não tem colisão, e o `CLEAR_RADIUS` continua valendo para todos. Se a densidade por bioma voltar a ser recalibrada, a costa deve ser contada em duas linhas (marco e detalhe de chão), não em uma.
 
 ---
 
@@ -71,7 +75,7 @@ Quatro a seis peças distintas bastam para um bioma ler como ele mesmo; as 11 aq
 Água + Natureza. **Coberto pelas 11 peças atuais.** Falta só porte: **2 peças hero**, estruturas recifais grandes o bastante para servirem de marco à distância (na escala do `Coralstone_Arch`, que hoje entra a 9×). O bioma é o único que pode se dar ao luxo de peça cara — é o menor em área e o mais denso.
 
 ### Mar raso — *"zona inicial de artrópodes aquáticos"*
-Água. Tem de ler **mais simples que o recife**, não igual. Hoje usa o mesmo kit e por isso os dois se confundem. **4 peças:** banco de areia com marcas de ondulação · pedra isolada submersa · tufo de alga curta · leito de conchas/bioclastos.
+Água. Tem de ler **mais simples que o recife**, não igual. **Feito em 2026-09-18** — kit próprio (`models/biomes/mar-raso/`, 5 peças) substituiu o acervo de coral que o bioma dividia com o recife. Leitura ainda não validada em captura; escalas do pool (`PZ01_SCATTER_POOL`) são ponto de partida.
 
 ### Mar Profundo — *"baixa luminosidade, substrato escuro, sensação de vazio e profundidade"*
 Água. A leitura é o **vazio** — poucas peças, cada uma grande e escura. Peça pequena aqui é ruído. **5 peças:** afloramento rochoso escuro (grande) · monte de sedimento · laje de escarpa, para marcar a quebra do talude em silhueta · aglomerado séssil pálido, como acento raro · formação de detrito afundado.
@@ -114,7 +118,9 @@ O portfólio sozinho não veste o mapa. Três peças, nesta ordem:
 
 1. **`MapDressing` por bioma.** Hoje é uma lista de landmarks e um pool de scatter para o mapa inteiro — `apply()` começa com `if map_code != "PZ-01": return` e não consulta bioma nenhum. Precisa passar a perguntar `MapBiomes.biome_at(pos)` no sorteio e escolher pool e densidade por resposta.
 2. **Reposicionar o recife.** A região saiu do centro no desenho aprovado (`cx -0.34`), e os corais continuam plantados em anel em volta da origem: **5 dos 14 landmarks** caem dentro dos Jardins Recifais hoje. Isso é conta já medida, não estimativa.
-3. **Ambiência por bioma.** A névoa e a luz são fragmentadas por **altura**, num `Environment` só. O Mar Profundo pede escuro e o glacial pede frio — nenhum dos dois é expressável como altura, e é a mesma discussão que "trecho seco novo ganha a sua omni" resolveu para a costa e a ilha.
+3. ~~**Ambiência por bioma.**~~ **Feito em 2026-09-17** (`scripts/world/biome_ambience.gd` no jogo): névoa, fundo, ambiente e sol por bioma, interpolados em 2 s na travessia, sobre o mesmo `Environment`. A fragmentação por altura continua valendo por baixo. Registro original: a névoa e a luz eram fragmentadas só por **altura**, e o Mar Profundo pede escuro e o glacial pede frio — nenhum dos dois é expressável como altura.
+
+> **Densidade e aglomeração** (medido na mesma rodada, ver `_scatter` em `map_dressing.gd`): com o orçamento de §3, aglomerar a *posição* das peças esvazia a tela — no mar raso, 34% das telas ficaram com no máximo uma peça, contra 6% do espaçamento uniforme. O scatter agrupa *espécie* em manchas, não posição. Aglomeração por posição só volta a fazer sentido com densidade maior, isto é, depois do `MultiMesh` de §5.
 
 Uma quarta, que é do spawner e não do cenário: a Plataforma Glacial é declarada **sem fauna**, e isso ainda não é expressável em dado — o `CreatureSpawner` exclui por predicado geográfico em código (`on_coast`, `on_island`), não por bioma.
 
@@ -126,6 +132,6 @@ Do que muda mais a leitura do mapa por peça encomendada:
 
 1. **Glacial (6)** — é o bioma que hoje mente na cara do jogador, com o painel dizendo "Plataforma Glacial" sobre coral turquesa.
 2. **Mar Profundo (5)** — é 28% do mapa vestido com o vocabulário errado, a maior área em desacordo.
-3. **Mar raso (4)** — não está errado, está indistinguível do recife; conserta a confusão entre os dois maiores biomas.
+3. ~~**Mar raso (4)**~~ — **feito em 2026-09-18**, kit próprio no lugar do acervo compartilhado com o recife.
 4. **Costa (4)** — pequena em área e já compensada pela vila, que dá a ela leitura própria.
 5. **Hero do recife (2)** — o bioma já funciona; isto é porte, não identidade.

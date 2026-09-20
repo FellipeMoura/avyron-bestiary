@@ -6309,6 +6309,8 @@ export interface components {
             effectCode: "damage" | "buff_attack" | "buff_defense" | "debuff_attack" | "debuff_defense" | "heal" | "charge_gain";
             effectValue: number;
             targetSelf: boolean;
+            /** @enum {string} */
+            attackVariant: "attack" | "attack2" | "attack3";
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -6345,6 +6347,11 @@ export interface components {
                 effectValue?: number;
                 /** @example false */
                 targetSelf?: boolean;
+                /**
+                 * @example attack
+                 * @enum {string}
+                 */
+                attackVariant?: "attack" | "attack2" | "attack3";
             }[];
             /**
              * @description Por que a mudança está sendo feita. Vai para o changelog.
@@ -6387,6 +6394,11 @@ export interface components {
             effectValue?: number;
             /** @example false */
             targetSelf?: boolean;
+            /**
+             * @example attack
+             * @enum {string}
+             */
+            attackVariant?: "attack" | "attack2" | "attack3";
             /**
              * @description Por que a mudança está sendo feita. Vai para o changelog.
              * @example 6º elemento definido para expansão do Cenozoico

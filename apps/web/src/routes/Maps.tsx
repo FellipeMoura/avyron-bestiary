@@ -333,14 +333,7 @@ export function Maps() {
         </p>
       </header>
 
-      <div className="flex justify-end">
-        <Link
-          to="/maps/prototype-checklist"
-          className="rounded border border-graphite/40 bg-slate/5 px-4 py-2 font-mono text-micro uppercase tracking-[0.18em] text-bone transition-colors hover:border-bone/40 hover:text-bone"
-        >
-          checklist do protótipo PZ-01
-        </Link>
-      </div>
+ 
 
       <ChainOverview
         maps={orderedMaps}
