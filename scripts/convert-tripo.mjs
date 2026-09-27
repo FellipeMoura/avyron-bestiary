@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, statSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, statSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { NodeIO } from "@gltf-transform/core";
@@ -10,23 +10,31 @@ import { copyToDocument, prune, unpartition } from "@gltf-transform/functions";
  *
  * ## O que é "base + casca"
  *
- * Todo corpo de criatura passa a dividir a MESMA base: o esqueleto de 55
- * ossos do Imp (`../mestre/imp-mestre.glb`, nomenclatura UE Mannequin, a
- * mesma da UAL) e a pose de repouso dele. A criatura só traz a casca: malha
+ * Todo corpo de criatura divide a MESMA base: o esqueleto de 55 ossos da
+ * mestre (`../mestre/manequim-mestre.glb`, gerada por `build-master.mjs`:
+ * nomes, hierarquia e rotações de repouso da UAL, juntas medidas no manequim,
+ * pesos próprios por difusão). A criatura só traz a casca: malha
  * e textura geradas sobre a silhueta da mestre. O arquivo final não carrega
  * clipe nenhum — o jogo já dá a biblioteca UAL inteira em runtime a
  * qualquer corpo com esses nomes de osso (`CreatureActor._build_retargeted_animation`,
- * o caminho que o placeholder Imp sempre usou).
+ * o mesmo caminho do placeholder Imp).
  *
  * ## Como a casca ganha pesos sem rig novo
  *
- * Por proximidade, do mesmo jeito que as roupas do kit de personagens
- * herdam os pesos do corpo. Para cada vértice da casca (já alinhada à
- * mestre em escala e posição), pegam-se os K vértices mais próximos da
- * mestre, misturam-se os pesos deles por inverso da distância, e ficam os 4
- * ossos mais fortes, renormalizados. Um vértice longe de tudo (um espinho,
- * uma cauda) herda o osso mais próximo e anda rígido com ele — é o
- * comportamento certo para apêndice sem osso próprio.
+ * Por projeção na SUPERFÍCIE da mestre. Para cada vértice da casca (já
+ * alinhada à mestre em escala e posição) acha-se o ponto mais próximo sobre
+ * os triângulos da mestre, e o peso sai interpolado (baricêntrico) dos três
+ * vértices daquele triângulo; ficam os 4 ossos mais fortes, renormalizados.
+ *
+ * Distância sozinha não sabe de que LADO de uma superfície está: o vértice da
+ * face interna da coxa esquerda fica perto da coxa direita, o de baixo do braço
+ * perto do flanco, o de baixo da cabeça perto do ombro. Por isso o candidato
+ * cuja NORMAL discorda da do vértice paga multa na distância
+ * (`NORMAL_PENALTY`) — face interna de uma coxa olha para −x, a da outra para
+ * +x —, e um osso de sufixo `_r` não comanda vértice claramente do lado
+ * esquerdo (`SIDE_GUARD`). `medir-rig.mjs` conta o que escapar na coluna
+ * "lado trocado". Um vértice longe de tudo (um espinho, uma cauda) é assunto
+ * do passo de apêndice rígido, mais abaixo.
  *
  * Isso só funciona porque a silhueta foi presa ao gabarito
  * (`render-master-views.mjs` + `tripo-multiview-probe.mjs`): articulações
@@ -49,7 +57,7 @@ import { copyToDocument, prune, unpartition } from "@gltf-transform/functions";
  * do Tripo, zero animações. Segue para `pnpm models:optimize` como qualquer
  * corpo definitivo (`<CODE>.glb` em `apps/web/public/models/`).
  *
- *     node scripts/convert-tripo.mjs --in ../mestre/prova/prova.glb --out ../mestre/prova/prova-rigada.glb [--master ../mestre/imp-mestre.glb] [--yaw 0] [--k 4] [--exclude-head-beyond 0.18]
+ *     node scripts/convert-tripo.mjs --in ../mestre/especies/CRT-005/casca.glb --out /tmp/CRT-005.glb [--master ../mestre/manequim-mestre.glb] [--yaw 0]
  */
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -62,31 +70,39 @@ function arg(name, fallback) {
 
 const IN = resolve(repoRoot, arg("in", ""));
 const OUT = resolve(repoRoot, arg("out", ""));
-const MASTER = resolve(repoRoot, arg("master", "../mestre/imp-mestre.glb"));
+const MASTER = resolve(repoRoot, arg("master", "../mestre/manequim-mestre.glb"));
 const YAW = Number(arg("yaw", "0")) * Math.PI / 180;
-const K = Number(arg("k", "4"));
+/** Quantos vértices da mestre abrem a busca: os triângulos que os tocam são os
+ * candidatos à projeção. 16 cobre com folga a casca mais grossa do elenco
+ * (casamento médio de 3–5 cm, malha da mestre com aresta de ~1,5 cm). */
+const SEARCH_VERTS = Number(arg("search", "16"));
+/** Multa de normal: candidato cuja normal faz menos de ~78° com a do vértice
+ * (produto ≥ 0,2) concorre pela distância real; abaixo disso a distância é
+ * multiplicada por até 3,4 (normais opostas). É multa e não corte porque a
+ * casca tem dobra e detalhe que a mestre lisa não tem — o certo ali ainda é o
+ * mais próximo, só não pode ganhar de uma superfície que olha para o mesmo lado. */
+const NORMAL_PENALTY = Number(arg("normal-penalty", "2"));
+/** Trava de lado: a partir de quantos metros do plano do meio um osso do lado
+ * oposto começa a perder o vértice, e onde perde de vez. Perto do meio (virilha,
+ * esterno) os dois lados mandam de verdade. */
+const SIDE_GUARD = [0.02, 0.05];
+/** `--report <arquivo.json>`: grava as medidas e os avisos desta conversão. É o
+ * que o `publish-shell.mjs --all` junta na tabela do fim — aviso que só existe
+ * no meio do log de 14 conversões é aviso que ninguém lê. */
+const REPORT_OUT = arg("report", null) ? resolve(repoRoot, arg("report", "")) : null;
+const conversion = { avisos: [] };
 /** Acima disto (em metros) o casamento é suspeito: a casca tem vértice a
  * mais de um palmo de qualquer vértice da mestre. */
 const FAR_WARN = 0.12;
-/** `--exclude-head-beyond <m>`: ignora, como candidatos à transferência, os
- * vértices da mestre pesados na cabeça (`Head` ≥ 50%) que estejam a mais
- * de X metros do plano central. É o caso das ORELHAS do Puglin: ficam na
- * altura do ombro, com |x| até 0,44 m, e sem este filtro o ombro e o braço
- * da casca herdam o osso da cabeça e viram "abas" quando o braço desce
- * (medido em 2026-09-15: 348 vértices de braço do manequim com Head
- * dominante). A cabeça do Puglin sem orelhas fica em |x| ≤ 0,18 m. */
-const EXCLUDE_HEAD_BEYOND = Number(arg("exclude-head-beyond", "0")) || 0;
 /**
  * Apêndices rígidos. Um espinho, garra ou cauda é um trecho da casca LONGE
- * da superfície da mestre, e a transferência por proximidade dá a cada
- * vértice dele uma mistura diferente de ossos (medido no CRT-005 em
- * 2026-09-17: 100% dos vértices de espinho com mistura ≥ 15% de 2+ ossos, e
- * uma garra repartida entre cinco ossos do braço). Pesos que variam ao
+ * da superfície da mestre, e a projeção dá a cada vértice dele uma mistura
+ * diferente de ossos (medido no CRT-005: 100% dos vértices de espinho com
+ * mistura ≥ 15% de 2+ ossos, e uma garra repartida entre cinco ossos do braço). Pesos que variam ao
  * longo do apêndice é o que o rasga e torce quando os ossos se separam.
  * Aqui cada componente conexo de vértices "longe" recebe UM peso só: a
  * média dos pesos da base onde ele encosta no corpo. O apêndice inteiro
- * passa a andar como corpo rígido preso à base — que é o que o auto-rig do
- * Meshy fazia, por pintar pelo osso mais próximo.
+ * passa a andar como corpo rígido preso à base.
  *
  * `APPENDAGE_DIST` é o que conta como "longe" (membro do componente);
  * `APPENDAGE_PROTRUDE` é quanto o componente precisa se afastar no ponto
@@ -104,65 +120,24 @@ const LIMB_WARN_HI = Number(arg("limb-warn-hi", "1.15"));
 /** Abaixo disto o braço lê atarracado mesmo com o fator perto de 1 — ver o
  * segundo AVISO do rig adaptativo. Referência: mestre 47%, Imp 44%. */
 const ARM_RATIO_WARN = Number(arg("arm-ratio-warn", "0.40"));
+/** Desvio tolerado entre uma junta de membro e o eixo do membro da casca, em
+ * fração do raio local — ver o bloco "conferência de juntas". A mestre contra
+ * si mesma mede 0–10%; acima de 60% a junta já está na casca do membro. */
+const JOINT_WARN = Number(arg("joint-warn", "0.6"));
 /**
  * Regiões rígidas declaradas pela espécie — `regioes.json` ao lado da
  * `casca.glb` (ou `--regioes <arquivo>`).
  *
- * POR QUE existe, medido em 2026-09-19 contra o Imp (corpo do kit, rigado à
- * mão) como referência: um rig feito à mão pinta ILHAS — 63% dos vértices do
- * Imp pertencem a UM osso só, e as piores arestas dele esticam 19% e estão
- * nas juntas de verdade (`pelvis|thigh`, `spine_01|spine_02`). A
- * transferência por proximidade, por construção, pinta um GRADIENTE: só 6%
- * dos vértices da mestre têm osso único, e as piores arestas dela esticam
- * 62% — 692 delas DENTRO da cabeça (`Head|Head`), que deveria ser um bloco
- * rígido. A cabeça do CRT-012 sair oval no jogo é isso.
- *
- * Nada de pós-processamento de peso converte gradiente em ilha, e as três
- * tentativas estão registradas para ninguém repetir: podar peso abaixo de um
- * limiar (0,05–0,20) PIORA o corpo inteiro (p95 de 66% para 90%), porque os
- * pesos fracos são a transição das juntas; `--k 1` piora mais (p95 92%); e
- * restringir por distância no grafo do esqueleto zera o vazamento da cabeça
- * para o braço (5,8% → 0,0%) mas troca o vínculo errado por COSTURA, abrindo
- * arestas `Head|upperarm` novas no lugar.
- *
- * O que cria ilha é declarar a ilha. Cada região diz "este trecho é uma peça
- * só, presa NESTE osso": peso 1,0 no núcleo, e uma rampa para dentro da
- * fronteira para a costura não abrir — a mesma rampa do passo de apêndice
- * rígido acima, que já se mediu funcionando (4,5%–6,3% de estiramento nas
- * saliências contra 62% na superfície geral).
- *
- * ## ATENÇÃO: declarar região não substitui peso bom na mestre
- *
- * Medido no CRT-012 em 2026-09-19, declarando `{"osso":"Head","dominante":true}`
- * contra a mestre ANTIGA (a de 15/09, sem repesagem): o NÚCLEO fica
- * perfeitamente rígido (mediana das arestas `Head|Head` vai de 4,7% para 0,0%,
- * que é o alvo), mas o p95 PIORA (67,5% → 88,6%) e o número de arestas esticando
- * mais de 200% dobra (218 → 528), com rasgo visível na fronteira (aresta de
- * 4,4 mm virando 60 mm). O relaxamento abaixo reduz o pior caso (de 4159% para
- * 1248%) sem resolver o p95.
- *
- * A razão é estrutural e vale para qualquer remendo local: a ilha encosta num
- * GRADIENTE, e a transição que ela precisaria não existe em volta dela para ser
- * reconstruída. O passo de apêndice escapa disso porque apêndice é
- * geometricamente separado — a costura cai numa dobra, com espaço para rampa.
- * A cabeça encosta em superfície lisa, e ali toda costura aparece.
- *
- * O conserto foi a MONTANTE, em 19–20/09, em dois passos, e o elenco inteiro foi
- * republicado sobre eles — SEM nenhuma região declarada. Medido nas 14 (p95):
- *
- *                                   cabeça   corpo
- *     antes de tudo                  62,7%   55,9%
- *     só repesada (repesar-mestre.py) 25,7%  55,7%   ← conserta QUEM comanda
- *     + re-posada (reposar-mestre.mjs) 4,8%  33,6%   ← conserta ONDE o osso está
- *     Imp, rigado à mão (alvo)         3,5%  21,2%
- *
- * Repesar sozinho não mexeu no corpo porque o bind estava a 35° e a animação a
- * ~9°: peso perfeito não ajuda se a pose de repouso discorda da animada. Ver
- * `mestre/README.md` para a tabela completa e o que ainda sobra.
- *
- * Portanto: use região para o que a repesagem não resolve sozinha — carapaça,
- * fileira de espinho, qualquer peça que a espécie queira como bloco e cuja
- * fronteira caia numa dobra. Antes de declarar uma, meça: pode não ser preciso.
+ * Cada região diz "este trecho é uma peça só, presa NESTE osso": peso 1,0 no
+ * núcleo, uma rampa para dentro da fronteira e um relaxamento da faixa vizinha
+ * para a costura não abrir. É opcional, e nenhuma espécie do elenco declara
+ * uma hoje: a cabeça e as mãos já chegam rígidas da mestre, e espinho, garra e
+ * cauda são pegos sozinhos pelo passo de apêndice. Serve para o que sobra —
+ * carapaça, fileira de placas, qualquer peça que a espécie queira como bloco e
+ * cuja fronteira caia numa DOBRA da geometria. Sobre superfície lisa a costura
+ * de uma ilha aparece (a transição que ela precisaria não existe em volta para
+ * ser reconstruída), então antes de declarar, meça com `medir-rig.mjs`: pode
+ * não ser preciso.
  *
  * Formato (todas as medidas em FRAÇÃO da altura da casca já alinhada, com
  * y = 0 no chão e x/z medidos a partir do eixo do corpo — as mesmas
@@ -181,11 +156,10 @@ const ARM_RATIO_WARN = Number(arg("arm-ratio-warn", "0.40"));
  * - `"dominante": true` — o trecho que o osso JÁ domina. É a forma certa para
  *   um bloco que o corpo tem mas a geometria não separa: a cabeça do CRT-012 é
  *   uma bola sentada no ombro (braços em 0,52–0,60 da altura, cabeça a partir
- *   de 0,62) e nenhum corte horizontal separa as duas. A transferência acerta
- *   QUAL osso manda; o que ela erra é o gradiente. Aqui a rampa corre sobre o
+ *   de 0,62) e nenhum corte horizontal separa as duas. Aqui a rampa corre sobre o
  *   próprio peso — `de` (padrão 0,55) é onde ainda vale o peso original e `ate`
  *   (padrão 0,90) é onde já é rígido —, então a fronteira fica exatamente onde
- *   a proximidade a colocou e só o miolo endurece.
+ *   a projeção a colocou e só o miolo endurece.
  * - `"acima": <fração>` ou `"caixa": {x,y,z}` — por geometria, em FRAÇÃO da
  *   altura da casca alinhada (y = 0 no chão, x/z a partir do eixo do corpo:
  *   as mesmas proporções que se leem na folha 2×2). Eixo omitido não
@@ -357,6 +331,66 @@ class Grid {
   }
 }
 
+/**
+ * Superfície da mestre para projeção: ponto mais próximo sobre os TRIÂNGULOS
+ * (não sobre os vértices), com a multa de normal descrita no cabeçalho.
+ */
+class Surface {
+  constructor(points, tri, grid) {
+    this.points = points; this.tri = tri; this.grid = grid;
+    this.incident = Array.from({ length: points.length }, () => []);
+    this.normal = [];
+    for (let t = 0; t < tri.length; t += 3) {
+      const a = points[tri[t]], b = points[tri[t + 1]], c = points[tri[t + 2]];
+      const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], w = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+      const n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
+      const l = Math.hypot(...n) || 1;
+      this.normal.push(n.map((x) => x / l));
+      for (let e = 0; e < 3; e++) this.incident[tri[t + e]].push(t / 3);
+    }
+  }
+  /** Ponto mais próximo no triângulo (Ericson, "Real-Time Collision Detection"
+   * 5.1.5), em coordenadas baricêntricas. */
+  static closest(p, a, b, c) {
+    const sub = (x, y) => [x[0] - y[0], x[1] - y[1], x[2] - y[2]];
+    const dot = (x, y) => x[0] * y[0] + x[1] * y[1] + x[2] * y[2];
+    const ab = sub(b, a), ac = sub(c, a), ap = sub(p, a);
+    const d1 = dot(ab, ap), d2 = dot(ac, ap);
+    if (d1 <= 0 && d2 <= 0) return [1, 0, 0];
+    const bp = sub(p, b), d3 = dot(ab, bp), d4 = dot(ac, bp);
+    if (d3 >= 0 && d4 <= d3) return [0, 1, 0];
+    const vc = d1 * d4 - d3 * d2;
+    if (vc <= 0 && d1 >= 0 && d3 <= 0) { const v = d1 / (d1 - d3); return [1 - v, v, 0]; }
+    const cp = sub(p, c), d5 = dot(ab, cp), d6 = dot(ac, cp);
+    if (d6 >= 0 && d5 <= d6) return [0, 0, 1];
+    const vb = d5 * d2 - d1 * d6;
+    if (vb <= 0 && d2 >= 0 && d6 <= 0) { const w = d2 / (d2 - d6); return [1 - w, 0, w]; }
+    const va = d3 * d6 - d5 * d4;
+    if (va <= 0 && d4 - d3 >= 0 && d5 - d6 >= 0) { const w = (d4 - d3) / ((d4 - d3) + (d5 - d6)); return [0, 1 - w, w]; }
+    const den = 1 / (va + vb + vc);
+    return [1 - vb * den - vc * den, vb * den, vc * den];
+  }
+  project(p, n) {
+    const seen = new Set();
+    let best = null, nearest = Infinity;
+    for (const { i } of this.grid.nearest(p, Math.min(SEARCH_VERTS, this.points.length))) for (const t of this.incident[i]) {
+      if (seen.has(t)) continue;
+      seen.add(t);
+      const ia = this.tri[t * 3], ib = this.tri[t * 3 + 1], ic = this.tri[t * 3 + 2];
+      const a = this.points[ia], b = this.points[ib], c = this.points[ic];
+      const bary = Surface.closest(p, a, b, c);
+      const q = [0, 1, 2].map((k) => bary[0] * a[k] + bary[1] * b[k] + bary[2] * c[k]);
+      const d = Math.hypot(q[0] - p[0], q[1] - p[1], q[2] - p[2]);
+      const agree = n[0] * this.normal[t][0] + n[1] * this.normal[t][1] + n[2] * this.normal[t][2];
+      const score = d * (agree >= 0.2 ? 1 : 1 + NORMAL_PENALTY * (0.2 - agree));
+      nearest = Math.min(nearest, d);
+      if (!best || score < best.score) best = { score, d, bary, verts: [ia, ib, ic] };
+    }
+    best.penalized = best.d > nearest + 1e-9;
+    return best;
+  }
+}
+
 // --- leitura ---------------------------------------------------------------
 
 async function main() {
@@ -373,22 +407,10 @@ async function main() {
   const mPos = mPrim.getAttribute("POSITION");
   const mJ = mPrim.getAttribute("JOINTS_0");
   const mW = mPrim.getAttribute("WEIGHTS_0");
-  const headIndex = joints.findIndex((j) => j.getName() === "Head");
   let mPoints = [];
   const mIndex = []; // índice original na primitiva da mestre, por candidato
-  let excluded = 0;
-  for (let i = 0; i < mPos.getCount(); i++) {
-    const p = mPos.getElement(i, []);
-    if (EXCLUDE_HEAD_BEYOND > 0 && headIndex !== -1 && Math.abs(p[0]) > EXCLUDE_HEAD_BEYOND) {
-      const jj = mJ.getElement(i, []), wv = mW.getElement(i, []);
-      let hw = 0;
-      for (let t = 0; t < 4; t++) if (jj[t] === headIndex) hw += wv[t];
-      if (hw >= 0.5) { excluded++; continue; }
-    }
-    mPoints.push(p);
-    mIndex.push(i);
-  }
-  if (excluded > 0) console.log(`mestre: ${excluded} vértice(s) de cabeça além de ${EXCLUDE_HEAD_BEYOND} m ignorados como candidatos (orelhas)`);
+  for (let i = 0; i < mPos.getCount(); i++) { mPoints.push(mPos.getElement(i, [])); mIndex.push(i); }
+  const mTri = Array.from(mPrim.getIndices().getArray());
   const mBox = bounds(mPoints);
   const mHeight = mBox.mx[1] - mBox.mn[1];
   console.log(`mestre: ${mPoints.length} vértices, ${joints.length} ossos, altura ${mHeight.toFixed(3)} m`);
@@ -528,69 +550,146 @@ async function main() {
     // Casca com os pés no chão: o quadril do esqueleto desceu na mesma medida.
     offset[1] -= sFloor - mFloor;
     const hipNew = jw1[jname("thigh_l")][13];
+    Object.assign(conversion, { braco: Number(fArm.toFixed(3)), perna: Number(fLeg.toFixed(3)) });
     console.log(`rig adaptativo: braço ×${fArm.toFixed(3)}, perna ×${fLeg.toFixed(3)} (quadril ${hipY.toFixed(3)} → ${hipNew.toFixed(3)} m), casca ${sFloor - mFloor >= 0 ? "abaixada" : "levantada"} ${(Math.abs(sFloor - mFloor) * 100).toFixed(1)} cm para os pés tocarem o chão`);
-    // AVISO de membro encolhido. Existe porque havia um buraco entre os dois
-    // portões: o `check-sheet.mjs` confere a FOLHA (2D) e o conversor mede o
-    // MODELO (3D), e entre um e outro está a geração no Tripo, que ninguém
-    // media. Medido no CRT-006 em 2026-09-20: a folha passou com braço 0,85×,
-    // o modelo saiu com 0,652×, e o rig encurtou os ossos em 35% sem dizer
-    // nada — o osso passa a cobrir dois terços do braço e o resto anda como
-    // toco rígido. É o que se vê no jogo como "mini braço". Três corpos do
-    // elenco estavam assim desde 17/09 (CRT-006 0,652, CRT-010 0,796,
-    // CRT-007 0,819) e ninguém tinha como saber sem abrir o log.
-    //
-    // A faixa aceita continua 0,60–1,40 (é o que o rig absorve de fato); isto
-    // só levanta a mão quando o encolhimento passa de 15%, que é onde ele
-    // começa a aparecer em movimento.
+    // AVISO de membro encolhido. O `check-sheet.mjs` confere a FOLHA (2D) e o
+    // conversor mede o MODELO (3D); entre um e outro está a geração no Tripo,
+    // que pode desviar da folha (medido no CRT-006: folha com braço 0,85×,
+    // modelo com 0,652×). O rig absorve 0,60–1,40, mas além de 15% o osso já
+    // cobre uma fração do membro diferente da que a arte desenhou, e isso tem
+    // de sair no log e no relatório, não ficar calado.
     for (const [nome, f] of [["braço", fArm], ["perna", fLeg]]) {
       if (f >= LIMB_WARN_LO && f <= LIMB_WARN_HI) continue;
       const pct = Math.abs(1 - f) * 100;
       console.log(`  AVISO: ${nome} ×${f.toFixed(3)} — o osso ficou ${pct.toFixed(0)}% ${f < 1 ? "mais curto" : "mais longo"} que o da mestre. A folha passou no portão mas o modelo do Tripo desviou; conferir a ${nome === "braço" ? "envergadura" : "altura da perna"} no visualizador antes de publicar.`);
+      conversion.avisos.push(`${nome} ×${f.toFixed(2)}`);
       if (f <= 0.6001 || f >= 1.3999) console.log(`    (cravado no limite da faixa — a arte está fora do que o rig consegue absorver)`);
     }
-    // Segunda causa de "braço curto", e ela NÃO aparece no fator acima: braço
-    // do tamanho certo num corpo grande demais. O `fArm` compara a casca com a
-    // MESTRE; isto compara o braço com o PRÓPRIO corpo. Medido em 2026-09-20:
-    // o Imp tem braço a 44% da altura e a mestre a 47%; o CRT-011 tem
-    // `fArm 0,977` (passa limpo) mas mede 1,34 de altura com braço de mestre,
-    // e sai a 35% — lê tão atarracado quanto o CRT-006, que chegou lá pelo
-    // outro caminho. Abaixo de 40% começa a aparecer.
+    // Segunda leitura de "braço curto", que o fator acima não pega: braço do
+    // tamanho certo num corpo grande demais. O `fArm` compara a casca com a
+    // MESTRE; isto compara o braço com o PRÓPRIO corpo (mestre 47%, Imp 44%;
+    // abaixo de 40% lê atarracado — o CRT-011 tem `fArm 0,977` e mede 36%).
     {
       const sAligned = allPts.map(align);
       const reach = Math.max(...sAligned.map((p) => p[0])) - Math.abs(shoulder[0]);
       const height = percentile(sAligned.map((p) => p[1]), 0.999) - percentile(sAligned.map((p) => p[1]), 0.001);
       const ratio = reach / height;
+      conversion.bracoPorAltura = Number(ratio.toFixed(3));
       if (ratio < ARM_RATIO_WARN) {
+        conversion.avisos.push(`braço a ${(ratio * 100).toFixed(0)}% da altura`);
         console.log(`  AVISO: braço a ${(ratio * 100).toFixed(0)}% da altura do corpo (mestre 47%, Imp 44%) — mesmo com fator perto de 1, um corpo alto com braço de mestre lê atarracado. Conferir a proporção na folha.`);
       }
     }
   }
 
+  // --- conferência de juntas ----------------------------------------------
+  // O rig adaptativo acerta o COMPRIMENTO do braço e da perna; ele não sabe se
+  // a junta caiu DENTRO do membro da casca. E é isso que decide se o cotovelo
+  // dobra no cotovelo da arte: junta fora do eixo do membro lê como "mini
+  // braço" por melhor que o peso seja. Aqui cada junta de membro
+  // é comparada com a seção da casca no plano dela — braço cortado em x, perna
+  // em y — e o desvio sai em fração do raio local do membro. Não corrige nada,
+  // de propósito: desvio grande é incompatibilidade de proporção entre a arte
+  // e a mestre, e o conserto é na folha (ver `mestre/README.md`), não um
+  // ajuste automático de esqueleto que a esconda.
+  {
+    const jwNow = joints.map((j) => worldMatrix(j));
+    const at = (n) => { const i = joints.findIndex((j) => j.getName() === n); return [jwNow[i][12], jwNow[i][13], jwNow[i][14]]; };
+    const tris = [];
+    let base = 0;
+    for (const r of raw) {
+      const idx = r.prim.getIndices();
+      const pts = r.pts.map(align);
+      if (idx) { const a = idx.getArray(); for (let t = 0; t < a.length; t += 3) tris.push([pts[a[t]], pts[a[t + 1]], pts[a[t + 2]]]); }
+      base += pts.length;
+    }
+    const cut = (axis, value, keep) => {
+      let L = 0; const c = [0, 0, 0]; const mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity];
+      for (const v of tris) {
+        const pts = [];
+        for (let e = 0; e < 3; e++) { const a = v[e], b = v[(e + 1) % 3]; const da = a[axis] - value, db = b[axis] - value; if ((da < 0) !== (db < 0)) { const k = da / (da - db); pts.push([0, 1, 2].map((q) => a[q] + (b[q] - a[q]) * k)); } }
+        if (pts.length !== 2 || !keep(pts[0]) || !keep(pts[1])) continue;
+        const l = Math.hypot(pts[0][0] - pts[1][0], pts[0][1] - pts[1][1], pts[0][2] - pts[1][2]); L += l;
+        for (let q = 0; q < 3; q++) { c[q] += l * (pts[0][q] + pts[1][q]) / 2; mn[q] = Math.min(mn[q], pts[0][q], pts[1][q]); mx[q] = Math.max(mx[q], pts[0][q], pts[1][q]); }
+      }
+      return L > 0 ? { c: c.map((x) => x / L), mn, mx } : null;
+    };
+    const LABEL = { upperarm: "ombro", lowerarm: "cotovelo", hand: "punho", thigh: "quadril", calf: "joelho", foot: "tornozelo" };
+    const report = [], bad = [];
+    for (const bone of Object.keys(LABEL)) {
+      let worst = null;
+      for (const [side, sx] of [["l", 1], ["r", -1]]) {
+        const j = at(`${bone}_${side}`);
+        const isArm = /arm|hand/.test(bone);
+        // O ombro e o quadril ficam dentro do tronco: a seção ali é o tronco
+        // inteiro e não diz nada do membro. Mede-se 3 cm membro adentro.
+        const probe = bone === "upperarm" ? [j[0] + sx * 0.03, j[1], j[2]] : bone === "thigh" ? [j[0], j[1] - 0.06, j[2]] : j;
+        const sec = isArm
+          ? cut(0, probe[0], (p) => Math.abs(p[1] - probe[1]) < 0.13 && Math.abs(p[2] - probe[2]) < 0.16)
+          : cut(1, probe[1], (p) => p[0] * sx > 0.004 && Math.abs(p[0] - probe[0]) < 0.12 && Math.abs(p[2] - probe[2]) < 0.16);
+        let dev = Infinity;
+        if (sec) {
+          const [u, w] = isArm ? [1, 2] : [0, 2];
+          const radius = ((sec.mx[u] - sec.mn[u]) + (sec.mx[w] - sec.mn[w])) / 4;
+          dev = Math.hypot(probe[u] - sec.c[u], probe[w] - sec.c[w]) / Math.max(radius, 1e-4);
+        }
+        if (!worst || dev > worst) worst = dev;
+      }
+      (conversion.juntas ??= {})[LABEL[bone]] = Number.isFinite(worst) ? Number(worst.toFixed(2)) : null;
+      report.push(`${LABEL[bone]} ${Number.isFinite(worst) ? Math.round(worst * 100) + "%" : "SEM MEMBRO"}`);
+      if (!(worst <= JOINT_WARN)) bad.push(LABEL[bone]);
+    }
+    console.log(`juntas × casca (desvio do eixo do membro, em % do raio local; pior dos dois lados): ${report.join(" | ")}`);
+    if (bad.length) conversion.avisos.push(`junta fora do eixo: ${bad.join(", ")}`);
+    if (bad.length) console.log(`  AVISO: ${bad.join(", ")} fora do eixo do membro da casca (> ${Math.round(JOINT_WARN * 100)}% do raio) — a arte não corresponde às articulações da mestre ali; a dobra vai cair fora do lugar. Conserto é na folha, não no conversor.`);
+  }
+
   // --- transferência ------------------------------------------------------
 
   const jw = [], ww = [];
-  const stats = { maxD: 0, sumD: 0, n: 0, far: 0, perJoint: new Map() };
+  const stats = { maxD: 0, sumD: 0, n: 0, far: 0, penalized: 0, sideFixed: 0, perJoint: new Map() };
+  const jointSide = joints.map((j) => (/_r$/.test(j.getName()) ? "_r" : /_l$/.test(j.getName()) ? "_l" : ""));
+  const surface = new Surface(mPoints, mTri, grid);
+  // Par espelhado de cada osso e o primeiro ancestral sem lado — ver o passo de
+  // apêndice rígido.
+  const jointNames = joints.map((j) => j.getName());
+  const mirrorJoint = jointNames.map((n) => (/_[lr]$/.test(n) ? jointNames.indexOf(n.replace(/_([lr])$/, (_, c) => (c === "l" ? "_r" : "_l"))) : -1));
+  const centralAncestor = joints.map((j) => { let k = j; while (k && /_[lr]$/.test(k.getName())) k = k.getParentNode(); return k ? jointNames.indexOf(k.getName()) : 0; });
   for (const r of raw) {
     r.aligned = r.pts.map(align);
     r.joints = [];
     r.weights = [];
     r.d0 = [];
-    for (const p of r.aligned) {
-      const nb = grid.nearest(p, K);
-      const d0 = nb[0].d;
+    for (let v = 0; v < r.aligned.length; v++) {
+      const p = r.aligned[v];
+      const acc = new Map();
+      const hit = surface.project(p, r.nms[v]);
+      const d0 = hit.d;
+      if (hit.penalized) stats.penalized++;
+      hit.verts.forEach((i, c) => {
+        if (hit.bary[c] <= 0) return;
+        const jj = mJ.getElement(mIndex[i], []), wv = mW.getElement(mIndex[i], []);
+        for (let t = 0; t < 4; t++) if (wv[t] > 0) acc.set(jj[t], (acc.get(jj[t]) ?? 0) + wv[t] * hit.bary[c]);
+      });
+      // Trava de lado: osso `_r` não comanda vértice claramente à esquerda (+x),
+      // nem `_l` à direita. Em T-pose nenhum osso de um lado chega ao outro.
+      const sideLoss = clamp((Math.abs(p[0]) - SIDE_GUARD[0]) / (SIDE_GUARD[1] - SIDE_GUARD[0]), 0, 1);
+      if (sideLoss > 0) {
+        const wrong = p[0] > 0 ? "_r" : "_l";
+        let bad = 0, kept = 0;
+        for (const [j, w] of acc) { if (jointSide[j] === wrong) bad += w; else kept += w; }
+        // Só havia osso do lado errado: melhor o peso que veio do que vértice órfão.
+        if (kept > 0 && bad > 0) {
+          for (const [j, w] of acc) if (jointSide[j] === wrong) acc.set(j, w * (1 - sideLoss));
+          if (bad * sideLoss > 0.02 * (bad + kept)) stats.sideFixed++;
+        }
+      }
       r.d0.push(d0);
       stats.maxD = Math.max(stats.maxD, d0);
       stats.sumD += d0;
       stats.n++;
       if (d0 > FAR_WARN) stats.far++;
-      // Mistura por inverso da distância (com piso para o vértice colado).
-      const acc = new Map();
-      for (const { i, d } of nb) {
-        const wgt = 1 / Math.max(d, 1e-4);
-        const jj = mJ.getElement(mIndex[i], []), wv = mW.getElement(mIndex[i], []);
-        for (let t = 0; t < 4; t++) if (wv[t] > 0) acc.set(jj[t], (acc.get(jj[t]) ?? 0) + wv[t] * wgt);
-      }
-      const top = [...acc.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
+      const top = [...acc.entries()].filter(([, w]) => w > 0).sort((a, b) => b[1] - a[1]).slice(0, 4);
       const total = top.reduce((sum, [, w]) => sum + w, 0);
       const jo = [0, 0, 0, 0], wo = [0, 0, 0, 0];
       top.forEach(([j, w], t) => { jo[t] = j; wo[t] = w / total; });
@@ -650,6 +749,22 @@ async function main() {
         const src = ring.size ? [...ring] : comp;
         const acc = new Map();
         for (const v of src) for (let t = 0; t < 4; t++) if (r.weights[v][t] > 0) acc.set(r.joints[v][t], (acc.get(r.joints[v][t]) ?? 0) + r.weights[v][t]);
+        // Apêndice no plano do meio (cauda, crista dorsal, abdômen): a base dele
+        // encosta nos DOIS lados e a média traz `thigh_l` + `thigh_r`. Como bloco
+        // rígido isso é errado de dois jeitos: no passo as coxas giram em sentidos
+        // opostos, e a mistura linear de duas rotações opostas ENCOLHE a peça
+        // (cos 30° = 0,87) — a cauda pulsa a cada passada (medido no CRT-001: 106
+        // vértices de cauda com a coxa oposta). A parte simétrica do par vai
+        // para o ancestral comum (`pelvis`, `spine_03`), que é quem carrega uma
+        // peça central; o que sobrar de assimétrico fica.
+        for (const [j, w] of [...acc]) {
+          const mirror = mirrorJoint[j];
+          if (mirror === -1 || !(acc.get(mirror) > 0) || !(acc.get(j) > 0)) continue;
+          const shared = Math.min(w, acc.get(mirror));
+          acc.set(j, acc.get(j) - shared); acc.set(mirror, acc.get(mirror) - shared);
+          acc.set(centralAncestor[j], (acc.get(centralAncestor[j]) ?? 0) + 2 * shared);
+        }
+        for (const [j, w] of [...acc]) if (w <= 1e-9) acc.delete(j);
         const rigid = new Map([...acc.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4));
         const rigidTotal = [...rigid.values()].reduce((a, b) => a + b, 0);
         // Rampa: encostado no corpo (d0 = APPENDAGE_DIST) mantém o peso
@@ -784,6 +899,7 @@ async function main() {
     if (smoothed > 0) console.log(`  fronteira relaxada: ${smoothed} vértice(s) em ${REGION_SMOOTH_RINGS} anel(éis), ${REGION_SMOOTH_PASSES} passada(s)`);
   }
 
+  console.log(`transferência: projeção na superfície da mestre — ${stats.penalized} vértice(s) recusaram o ponto mais próximo por normal contrária, ${stats.sideFixed} perderam influência do lado oposto do corpo`);
   console.log(`casamento: distância média ${(stats.sumD / stats.n * 100).toFixed(1)} cm, máxima ${(stats.maxD * 100).toFixed(1)} cm, ${stats.far} vértice(s) além de ${FAR_WARN * 100} cm`);
   if (stats.far > 0) console.log(`  AVISO: ${stats.far} vértice(s) longe da mestre — apêndice sem osso ou silhueta desviada; conferir no visualizador`);
   const top = [...stats.perJoint.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8)
@@ -828,10 +944,14 @@ async function main() {
   mkdirSync(dirname(OUT), { recursive: true });
   await io.write(OUT, out);
 
+  if (REPORT_OUT) {
+    Object.assign(conversion, { casamentoMedioCm: Number((stats.sumD / stats.n * 100).toFixed(1)), verticesLonge: stats.far, normalRecusada: stats.penalized, ladoCorrigido: stats.sideFixed });
+    writeFileSync(REPORT_OUT, JSON.stringify(conversion, null, 2));
+  }
   const r = out.getRoot();
   console.log(`escrito: ${OUT} (${(statSync(OUT).size / 1e6).toFixed(2)} MB)`);
   console.log(`  malhas ${r.listMeshes().map((m) => m.getName()).join(",")} | skin ${r.listSkins().length} × ${r.listSkins()[0].listJoints().length} ossos | texturas ${r.listTextures().length} | materiais ${r.listMaterials().map((m) => m.getName()).join(",")} | anims ${r.listAnimations().length}`);
-  console.log(`próximo passo: pnpm models:publish -- --code <CODE> leva até o jogo; para uma prova solta, abrir no Godot pelo caminho do Imp`);
+  console.log(`próximo passo: pnpm models:publish -- --code <CODE> leva até o jogo; para uma prova solta, shot_shell.gd no repo do jogo`);
 }
 
 main().catch((err) => {

@@ -274,6 +274,29 @@ O que morde:
 - O export **aborta** em duelista sem linha de duelo, em nível acima de `combat_rules.levelMax`, e em travessia exigindo Glifo que arena nenhuma concede — este último trancaria a campanha em silêncio. **Avisa** (e escreve) quando um Glifo concedido não abre travessia nenhuma: é o estado normal enquanto a era seguinte não tem mapa.
 - Onde o guardião e a arena ficam plantados **não** é cadastro: posição é layout de cena, no repo do jogo.
 
+### A escada da arena (`arena-stages`)
+
+Desde 2026-09 a arena é lutada em **estágios**: o estágio N é a dificuldade N, um oponente cada, e vencer o N libera o N+1. A tabela é `arena_stages`, junção NPC duelista × número do estágio, com upsert — re-POST com o mesmo `npcCode` + `stage` troca oponente, nível ou prêmio.
+
+```powershell
+$body = @{
+  items = @(
+    @{ npcCode="NPC-002"; stage=1;  opponentCreatureCode="CRT-008"; opponentLevel=9;  rewardCurrency=30 },
+    @{ npcCode="NPC-002"; stage=10; opponentCreatureCode="CRT-021"; opponentLevel=18; rewardCurrency=250 }
+  )
+  reason = "..."; impact = "..."
+} | ConvertTo-Json -Depth 4
+Invoke-RestMethod "$api/arena-stages/batch" -Method Post -Headers $h -Body $body
+```
+
+O que morde:
+
+- **O último estágio tem de ser o duelo de `npc-duelists`** (mesma criatura, mesmo nível). É esse duelo que o catálogo anuncia e que concede o Glifo; mudar o campeão é mexer nas DUAS linhas, e o export aborta enquanto elas discordarem.
+- **A sequência é contígua, 1..N.** Não existe DELETE: para encurtar uma escada, hoje, é SQL direto + `db:dump`. Buraco no meio aborta o export.
+- `rewardCurrency` é pago **uma vez**, na primeira vitória; refazer paga só XP. Omitido = 0.
+- Duelista **sem** estágios é estado normal: o jogo luta o próprio duelo como escada de um degrau.
+- Estágio em NPC que não é `duelist` responde 422 nomeando o papel.
+
 ## Dizer onde cada bioma fica dentro do mapa
 
 ```powershell
@@ -458,6 +481,8 @@ O export **aborta sem escrever nada** e lista o que falta se alguma criatura est
 | classe com criatura no elenco sem `mining_rates` ou sem `workFunction` | o perfil de trabalho da classe vira decoração |
 | classe com criatura no elenco sem material de progressão | essa criatura acumula XP e nunca sobe de nível |
 | NPC `duelist` sem linha em `npc_duelists` | a arena não tem contra quem encenar a luta |
+| escada de arena com degrau faltando (`arena_stages` não contígua 1..N) | o jogo libera o N+1 ao vencer o N; um buraco é um degrau que ninguém passa |
+| último estágio diferente do duelo de `npc_duelists` | o catálogo anunciaria um campeão e o jogo encenaria outro |
 | `opponentLevel` acima de `combat_rules.levelMax` | nível que o jogo não sabe montar; o CHECK do banco não alcança outra tabela |
 | travessia exigindo Glifo que **arena nenhuma concede** | beco sem saída: o guardião nunca deixa passar e a campanha trava sem erro em lugar nenhum |
 

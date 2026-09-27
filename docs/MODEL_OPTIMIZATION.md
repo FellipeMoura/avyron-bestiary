@@ -38,4 +38,4 @@ O resultado era codificar KTX2 aqui para decodificar de volta a PNG no espelho d
 
 ## O corpo do jogador
 
-Não existe mais um `.glb` de jogador: desde 2026-09-17 ele é montado pelo kit de personagens (`apps/web/public/models/characters/`, `pnpm models:characters`), como os NPCs, a partir de uma receita fixa no jogo. O export Meshy anterior está em `../shared-assets/legacy/meshy-player/`.
+Não existe `.glb` de jogador: ele é montado pelo kit de personagens (`apps/web/public/models/characters/`, `pnpm models:characters`), como os NPCs, a partir de uma receita fixa no jogo.

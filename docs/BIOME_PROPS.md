@@ -2,7 +2,7 @@
 
 O que encomendar, modelar ou gerar para vestir os biomas do PZ-01, e por que cada exigência existe.
 
-**Escopo.** Aqui é só **cenário** — coral, rocha, gelo, sedimento. O corpo das criaturas está coberto e não se repete: estilo e orçamento em `direcao-3d-arte`, paleta e contorno em `identidade-visual`, geração via Meshy em `pipeline-meshy-ai`, e o pipeline de otimização em [MODEL_OPTIMIZATION.md](MODEL_OPTIMIZATION.md). Prop é outra coisa: não tem rig, não tem animação, não é recolorido por elemento, e aparece dezenas de vezes na tela em vez de uma.
+**Escopo.** Aqui é só **cenário** — coral, rocha, gelo, sedimento. O corpo das criaturas está coberto e não se repete: estilo e orçamento em `direcao-3d-arte`, paleta e contorno em `identidade-visual`, geração pelo fluxo base + casca em `../mestre/README.md`, e o pipeline de otimização em [MODEL_OPTIMIZATION.md](MODEL_OPTIMIZATION.md). Prop é outra coisa: não tem rig, não tem animação, não é recolorido por elemento, e aparece dezenas de vezes na tela em vez de uma.
 
 **Por que agora.** O PZ-01 fechou a partição espacial em 2026-08-28: cinco biomas, sete regiões, o jogo respondendo o bioma por posição. A mineração distingue cinco lugares, a partição distingue cinco lugares, e **a imagem distingue um** — uma captura da Plataforma Glacial hoje mostra o painel dizendo "Plataforma Glacial" sobre um leito coberto de coral turquesa. Este documento é o que fecha essa lacuna.
 

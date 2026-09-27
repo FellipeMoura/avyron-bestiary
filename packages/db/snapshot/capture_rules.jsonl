@@ -52,3 +52,10 @@
 {"id":65,"creature_id":66,"catch_rate":60,"notes":null,"created_at":"2026-08-27T21:19:11.776Z","updated_at":"2026-08-27T21:19:11.776Z"}
 {"id":66,"creature_id":67,"catch_rate":110,"notes":null,"created_at":"2026-08-27T21:19:11.776Z","updated_at":"2026-08-27T21:19:11.776Z"}
 {"id":67,"creature_id":68,"catch_rate":130,"notes":null,"created_at":"2026-08-27T21:19:11.776Z","updated_at":"2026-08-27T21:19:11.776Z"}
+{"id":68,"creature_id":69,"catch_rate":190,"notes":"PROVISÓRIO (revisão do PZ-02, 2026-09-27).","created_at":"2026-09-27T19:17:27.712Z","updated_at":"2026-09-27T19:17:27.712Z"}
+{"id":69,"creature_id":70,"catch_rate":210,"notes":"PROVISÓRIO (revisão do PZ-02, 2026-09-27).","created_at":"2026-09-27T19:17:27.712Z","updated_at":"2026-09-27T19:17:27.712Z"}
+{"id":70,"creature_id":71,"catch_rate":110,"notes":"PROVISÓRIO (revisão do PZ-02, 2026-09-27).","created_at":"2026-09-27T19:17:27.712Z","updated_at":"2026-09-27T19:17:27.712Z"}
+{"id":71,"creature_id":72,"catch_rate":150,"notes":"PROVISÓRIO (revisão do PZ-02, 2026-09-27).","created_at":"2026-09-27T19:17:27.712Z","updated_at":"2026-09-27T19:17:27.712Z"}
+{"id":72,"creature_id":73,"catch_rate":140,"notes":"PROVISÓRIO (revisão do PZ-02, 2026-09-27).","created_at":"2026-09-27T19:17:27.712Z","updated_at":"2026-09-27T19:17:27.712Z"}
+{"id":73,"creature_id":74,"catch_rate":160,"notes":"PROVISÓRIO (revisão do PZ-02, 2026-09-27).","created_at":"2026-09-27T19:17:27.712Z","updated_at":"2026-09-27T19:17:27.712Z"}
+{"id":74,"creature_id":75,"catch_rate":175,"notes":"PROVISÓRIO (revisão do PZ-02, 2026-09-27).","created_at":"2026-09-27T19:17:27.712Z","updated_at":"2026-09-27T19:17:27.712Z"}

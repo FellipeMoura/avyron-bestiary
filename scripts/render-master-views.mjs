@@ -11,7 +11,7 @@ import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
  *
  * ## Para que serve
  *
- * É o gabarito de silhueta da malha-mestre (`../mestre/imp-mestre.glb`): as
+ * É o gabarito de silhueta da malha-mestre (`../mestre/manequim-mestre.glb`): as
  * quatro imagens que o `multiview-to-model` do Tripo recebe, depois de cada
  * uma ser restilizada com a espécie. Como as quatro vistas saem da MESMA
  * escala e do MESMO enquadramento, a silhueta que o Tripo reconstrói fica
@@ -32,7 +32,7 @@ import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
  * quem olha — a mesma convenção do visualizador da mestre e a que o Tripo
  * espera nas chaves `front`/`left`/`back`/`right`.
  *
- *     node scripts/render-master-views.mjs [--in ../mestre/imp-mestre.glb] [--out ../mestre/vistas] [--size 1024]
+ *     node scripts/render-master-views.mjs [--in ../mestre/manequim-mestre.glb] [--out ../mestre/vistas] [--size 1024]
  */
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -43,7 +43,7 @@ function arg(name, fallback) {
   return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
 }
 
-const IN = resolve(repoRoot, arg("in", "../mestre/imp-mestre.glb"));
+const IN = resolve(repoRoot, arg("in", "../mestre/manequim-mestre.glb"));
 const OUT = resolve(repoRoot, arg("out", "../mestre/vistas"));
 const SIZE = Number(arg("size", "1024"));
 /** Giro em Y (graus) aplicado à malha antes de renderizar. Serve para medir

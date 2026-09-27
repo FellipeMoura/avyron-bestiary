@@ -29,7 +29,7 @@ import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
  *   quanto muda a VRAM — JPEG só comprime em disco, a GPU guarda o mapa
  *   descomprimido.
  * - **Emissivo morto**: mapa emissivo cujo pico não passa de preto é ruído
- *   de compressão sobre uma imagem vazia (herança do Meshy). Sai, e o
+ *   de compressão sobre uma imagem vazia. Sai, e o
  *   `emissiveFactor` vai a zero junto — em glTF o emissivo é fator ×
  *   textura, e tirar a textura deixando o fator em 1 acende o corpo inteiro
  *   em branco. O script se recusa a gravar se encontrar essa combinação.
@@ -58,8 +58,8 @@ const MODELS_DIR = dirFlag === -1
 const BACKUP_DIR = resolve(repoRoot, "apps/web/.model-backups");
 
 const MAX_TEXTURE = 2048;
-/** Pico (0–255) até onde um emissivo é considerado preto. Medido nos corpos
- * Meshy de 2026-09: ruído nunca passou de 17, brilho real começava em 90. */
+/** Pico (0–255) até onde um emissivo é considerado preto. Medido no elenco:
+ * ruído nunca passou de 17, brilho real começa em 90. */
 const EMISSIVE_BLACK_PEAK = 8;
 
 const mb = (n) => (n / 1024 / 1024).toFixed(2);

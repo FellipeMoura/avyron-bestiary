@@ -30,6 +30,10 @@
     "game:export": "node scripts/export-game-data.mjs",
     "models:tripo": "node scripts/convert-tripo.mjs",
     "models:publish": "node scripts/publish-shell.mjs",
+    "models:publish:all": "node scripts/publish-shell.mjs --all",
+    "models:master": "node scripts/build-master.mjs",
+    "models:measure": "node scripts/medir-rig.mjs",
+    "models:overlay": "node scripts/rig-overlay.mjs",
     "species:prompt": "node scripts/species-prompt.mjs",
     "species:check": "node scripts/check-sheet.mjs"
   },

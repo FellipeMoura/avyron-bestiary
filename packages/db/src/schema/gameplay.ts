@@ -155,6 +155,54 @@ export type NpcDuelist = typeof npcDuelists.$inferSelect;
 export type NewNpcDuelist = typeof npcDuelists.$inferInsert;
 
 /**
+ * The ladder an arena is climbed by — N rows per duelist NPC, one per stage.
+ *
+ * Since 2026-09-20 an arena is its own place in the game (the player leaves
+ * the map and enters the arena grounds) and is fought as a ladder: stage N is
+ * difficulty N, one opponent each, and clearing N unlocks N+1. Which creature
+ * stands on each step, at what level, and what the first clear pays are
+ * balancing, so they live here and not in Godot (rule 1 of that repo).
+ *
+ * **`npc_duelists` stays the arena's headline, and the two must agree.** That
+ * row names the duel that grants the Glifo; the LAST stage of the ladder is
+ * that same duel. The export aborts when they disagree — otherwise the
+ * catalog would advertise one champion and the game would stage another. A
+ * duelist with no stages is a normal state (arena not yet laddered): the game
+ * then treats the `npc_duelists` duel as a one-step ladder.
+ *
+ * `stage` is 1-based and the export demands it contiguous (1..N, no holes): a
+ * missing step would be a step nobody can unlock past. `reward_currency` is
+ * paid once, on the first clear — replays pay XP only, or the ladder would be
+ * a currency farm.
+ */
+export const arenaStages = pgTable(
+  "arena_stages",
+  {
+    id: serial("id").primaryKey(),
+    npcId: integer("npc_id")
+      .notNull()
+      .references(() => npcs.id, { onDelete: "cascade" }),
+    stage: integer("stage").notNull(),
+    opponentCreatureId: integer("opponent_creature_id")
+      .notNull()
+      .references(() => creatures.id),
+    opponentLevel: integer("opponent_level").notNull(),
+    rewardCurrency: integer("reward_currency").notNull().default(0),
+    notes: text("notes"),
+    ...timestamps,
+  },
+  (t) => ({
+    uniqueStage: unique("arena_stages_npc_stage_unique").on(t.npcId, t.stage),
+    stageRange: check("arena_stages_stage_range", sql`${t.stage} >= 1`),
+    levelRange: check("arena_stages_level_range", sql`${t.opponentLevel} >= 1`),
+    rewardRange: check("arena_stages_reward_range", sql`${t.rewardCurrency} >= 0`),
+  }),
+);
+
+export type ArenaStage = typeof arenaStages.$inferSelect;
+export type NewArenaStage = typeof arenaStages.$inferInsert;
+
+/**
  * What a merchant carries. Junction npc × item with upsert semantics, same
  * shape as `drops` and `map_biomes`.
  *

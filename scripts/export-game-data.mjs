@@ -157,6 +157,7 @@ const [
   mapConnections,
   glyphs,
   npcDuelists,
+  arenaStages,
   changelog,
   combatRules,
   allItems,
@@ -192,6 +193,7 @@ const [
   get(`/map-connections?${LIMIT}`),
   get(`/glyphs?${LIMIT}`),
   get(`/npc-duelists?${LIMIT}`),
+  get(`/arena-stages?${LIMIT}`),
   get(`/changelog?limit=1`),
   get(`/combat-rules`),
   get(`/items?${LIMIT}`),
@@ -258,6 +260,13 @@ for (const offer of merchantOffers) {
 const CHARACTERS_MANIFEST = resolve(REPO_ROOT, "apps/web/public/models/characters/manifest.json");
 const appearanceByNpc = new Map(npcAppearances.map((a) => [a.npcId, a]));
 const duelByNpc = new Map(npcDuelists.map((d) => [d.npcId, d]));
+/** A escada de cada arena, já em ordem de degrau — ver `buildStages`. */
+const stagesByNpc = new Map();
+for (const s of arenaStages) {
+  if (!stagesByNpc.has(s.npcId)) stagesByNpc.set(s.npcId, []);
+  stagesByNpc.get(s.npcId).push(s);
+}
+for (const list of stagesByNpc.values()) list.sort((a, b) => a.stage - b.stage);
 
 function buildAppearance(npc) {
   const a = appearanceByNpc.get(npc.id);
@@ -670,7 +679,54 @@ const outMerchants = npcs
  * mapa de uma era concede Glifo; as intermediárias são duelo com recompensa
  * própria. Já a ausência da linha inteira é erro — sem ela o jogo não tem
  * contra quem encenar a luta.
+ *
+ * `stages` é a escada da arena (tabela `arena_stages`, 2026-09-20): a arena
+ * virou um mapa próprio, lutado em degraus — o estágio N é a dificuldade N.
+ * Lista vazia é estado NORMAL (arena ainda sem escada): o jogo trata o `duel`
+ * como escada de um degrau só. Com escada, três contradições abortam:
+ *
+ * - degrau faltando (a sequência tem de ser 1..N): o jogo libera o N+1 ao
+ *   vencer o N, então um buraco é um degrau que ninguém passa;
+ * - nível acima de `combat_rules.levelMax`, como no `duel`;
+ * - último degrau diferente do `duel`. É o `duel` que o catálogo anuncia como
+ *   o campeão e que concede o Glifo; se a escada terminasse em outra luta, o
+ *   bestiário mostraria um duelo e o jogo encenaria outro.
  */
+function buildStages(npc, duel) {
+  const rows = stagesByNpc.get(npc.id) ?? [];
+  rows.forEach((s, i) => {
+    if (s.stage !== i + 1) {
+      problems.push(
+        `npc ${npc.code} (${npc.name}) arena ladder is not contiguous: expected stage ${i + 1}, `
+          + `found ${s.stage} — a missing step can never be unlocked past`,
+      );
+    }
+    if (s.opponentLevel > combatRules.levelMax) {
+      problems.push(
+        `npc ${npc.code} (${npc.name}) stage ${s.stage} fields `
+          + `${code(creatureById, s.opponentCreatureId)} at level ${s.opponentLevel}, `
+          + `above combat_rules.levelMax (${combatRules.levelMax})`,
+      );
+    }
+  });
+  const last = rows[rows.length - 1];
+  if (last && duel && (last.opponentCreatureId !== duel.opponentCreatureId
+      || last.opponentLevel !== duel.opponentLevel)) {
+    problems.push(
+      `npc ${npc.code} (${npc.name}) last arena stage `
+        + `(${code(creatureById, last.opponentCreatureId)} lv ${last.opponentLevel}) does not match its `
+        + `npc_duelists duel (${code(creatureById, duel.opponentCreatureId)} lv ${duel.opponentLevel}) — `
+        + `the catalog would advertise one champion and the game would stage another`,
+    );
+  }
+  return rows.map((s) => ({
+    stage: s.stage,
+    opponentCode: code(creatureById, s.opponentCreatureId),
+    opponentLevel: s.opponentLevel,
+    rewardCurrency: s.rewardCurrency,
+  }));
+}
+
 const outDuelists = npcs
   .filter((n) => n.role === "duelist")
   .map((n) => {
@@ -702,6 +758,7 @@ const outDuelists = npcs
             grantsGlyph: code(glyphById, duel.grantsGlyphId),
           }
         : null,
+      stages: buildStages(n, duel),
     };
   });
 

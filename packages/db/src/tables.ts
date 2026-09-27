@@ -39,6 +39,7 @@ export const TABLES: readonly string[] = [
   "merchant_offers",
   "npc_appearances",
   "npc_duelists",
+  "arena_stages",
   "relics",
   "equipment",
   "equipment_recipes",

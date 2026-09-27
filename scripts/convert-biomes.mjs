@@ -204,6 +204,36 @@ await processMeshyKit(
   resolve(repoRoot, "apps/web/public/models/biomes/mar-raso"),
 );
 
+// Costa Primordial (BIO-002, 2026-09-20): kit de rocha próprio da vila da
+// costa do PZ-01. Ao contrário dos outros lotes, aqui o nome do Meshy NÃO
+// viaja: três dos nove arquivos chegaram como "*_Stone_Platform*" e são peças
+// de papel diferente (laje, plataforma, afloramento), então o layout do jogo
+// (`MapDressing.PZ01_COAST_SET`) ficaria ilegível com eles. Cada arquivo foi
+// identificado por render + AABB contra os nove assets aprovados e sai com o
+// nome da FUNÇÃO. A chave inclui o carimbo do Meshy de propósito: arquivo
+// regerado cai no nome limpo padrão, o jogo avisa "prop ausente", e quem
+// regerou confere a peça antes de reapontar a chave — em vez de uma peça
+// nova entrar calada no lugar de outra. O suporte de ferramentas e o caixote
+// de minerais do mesmo lote foram descartados e não entram nesta pasta.
+const COSTA_RENAME = {
+  "Meshy_AI_Layered_Desert_Cliffs_0920191210_texture": "Falesia",
+  "Meshy_AI_Sunlit_Stone_Platform_0920191133_texture": "Afloramento",
+  "Meshy_AI_Layered_Stone_Formati_0920191120_texture": "Pedras_Pequenas",
+  "Meshy_AI_Desert_Stone_Platform_0920191216_texture": "Laje_Caminho",
+  "Meshy_AI_Stone_Rope_Barrier_0920191158_texture": "Cerca_Corda",
+  "Meshy_AI_Sunbaked_Stone_Arena_0920191152_texture": "Poca_Mare",
+  "Meshy_AI_Stonebound_Cluster_0920191206_texture": "Minerais",
+  "Meshy_AI_Banded_Sandstone_Rock_0920191141_texture": "Rocha",
+  "Meshy_AI_Sunbaked_Stone_Platfo_0920191102_texture": "Plataforma",
+};
+
+await processMeshyKit(
+  "costa primordial",
+  join(mapAssetsBiomes, "costa"),
+  resolve(repoRoot, "apps/web/public/models/biomes/costa"),
+  COSTA_RENAME,
+);
+
 // Peças novas do recife somam ao kit `aquatic` existente (mesmo diretório de
 // saída do lote original acima) — o recife continua sendo o dono do kit
 // aquático, agora sem o mar raso disputando as mesmas peças.

@@ -62,7 +62,7 @@ const GLB_ARG = arg("glb", null);
  * caixa. Sem a flag, cada arquivo é enquadrado pela própria caixa — certo
  * para a prova em argila, errado para uma espécie com apêndices. */
 const ALIGNED = process.argv.includes("--aligned");
-const MASTER = resolve(repoRoot, arg("master", "../mestre/imp-mestre.glb"));
+const MASTER = resolve(repoRoot, arg("master", "../mestre/manequim-mestre.glb"));
 const VIEW_NAMES = ["front", "left", "back", "right"];
 
 async function silhouetteIoU(a, b) {
